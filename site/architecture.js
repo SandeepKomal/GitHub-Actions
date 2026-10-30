@@ -46,12 +46,26 @@
   let svg = null, dot = null, pinned = null, touring = 0, L = null;
 
   const rect = (id) => { const [c, r] = L.at[id]; return [c * L.cell[0] + 16, r * L.cell[1] + 40 + (r >= L.bands[1][1] ? 24 : 0), L.box[0], L.box[1]]; };
+  // The sides an edge leaves and enters by: the ones facing each other.
+  const sides = (a, b) => {
+    const [ax, ay] = rect(a), [bx, by] = rect(b);
+    if (Math.abs(ay - by) < 2) return ax < bx ? ["right", "left"] : ["left", "right"];
+    return ay < by ? ["bottom", "top"] : ["top", "bottom"];
+  };
+  // Edges sharing a side of a box get their own anchor points along it.
+  function anchors() {
+    const groups = {};
+    EDGES.forEach(([a, b], i) => { const [sa, sb] = sides(a, b); (groups[a + ":" + sa] = groups[a + ":" + sa] || []).push([i, 0]); (groups[b + ":" + sb] = groups[b + ":" + sb] || []).push([i, 1]); });
+    const off = EDGES.map(() => [0, 0]);
+    for (const list of Object.values(groups)) list.forEach(([i, end], k) => { off[i][end] = (k - (list.length - 1) / 2) * 18; });
+    return off;
+  }
   // An edge leaves the side that faces the other box.
-  function route(a, b) {
+  function route(a, b, [oa, ob]) {
     const [ax, ay, aw, ah] = rect(a), [bx, by, bw, bh] = rect(b);
-    if (Math.abs(ay - by) < 2) return ax < bx ? [[ax + aw, ay + ah / 2], [bx, by + bh / 2]] : [[ax, ay + ah / 2], [bx + bw, by + bh / 2]];
+    if (Math.abs(ay - by) < 2) return ax < bx ? [[ax + aw, ay + ah / 2 + oa], [bx, by + bh / 2 + ob]] : [[ax, ay + ah / 2 + oa], [bx + bw, by + bh / 2 + ob]];
     const down = ay < by;
-    const x1 = ax + aw / 2, y1 = down ? ay + ah : ay, x2 = bx + bw / 2, y2 = down ? by : by + bh;
+    const x1 = ax + aw / 2 + oa, y1 = down ? ay + ah : ay, x2 = bx + bw / 2 + ob, y2 = down ? by : by + bh;
     const mid = (y1 + y2) / 2;
     return x1 === x2 ? [[x1, y1], [x2, y2]] : [[x1, y1], [x1, mid], [x2, mid], [x2, y2]];
   }
@@ -66,7 +80,8 @@
       const y = r0 * L.cell[1] + 12 + (r0 >= L.bands[1][1] ? 24 : 0);
       svg.append(s("rect", { x: 4, y, width: w - 8, height: (r1 - r0 + 1) * L.cell[1] + 8, rx: 16, class: "arch-panel" }), s("text", { x: 18, y: y + 20, class: "arch-panel-label" }, label));
     }
-    for (const [a, b] of EDGES) svg.append(s("polyline", { points: route(a, b).join(" "), class: "arch-edge", "data-from": a, "data-to": b, "marker-end": "url(#arch-arrow)" }));
+    const off = anchors();
+    EDGES.forEach(([a, b], i) => svg.append(s("polyline", { points: route(a, b, off[i]).join(" "), class: "arch-edge", "data-from": a, "data-to": b, "marker-end": "url(#arch-arrow)" })));
     for (const id of Object.keys(L.at)) {
       const c = parts[id];
       const [x, y, bw, bh] = rect(id);

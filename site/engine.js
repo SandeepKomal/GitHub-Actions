@@ -39,6 +39,9 @@
   // --- expressions: ${{ ... }} ----------------------------------------------------
 
   class ExprError extends Error {}
+  class ShellSyntax extends Error {}
+  // A step failure with a message for the log, as opposed to a bug.
+  class StepError extends Error {}
   const FUNCS = ["contains", "startswith", "endswith", "format", "join", "tojson", "fromjson", "hashfiles", "success", "failure", "always", "cancelled"];
   const CONTEXTS = ["github", "env", "vars", "job", "jobs", "steps", "runner", "secrets", "strategy", "matrix", "needs", "inputs"];
 
@@ -317,7 +320,7 @@
     const jobs = isObj(wf.jobs) ? wf.jobs : {};
     for (const [id, job] of Object.entries(jobs)) {
       if (!/^[A-Za-z_][A-Za-z0-9_-]*$/.test(id) || id.length >= 100) {
-        add(jobs, id, `The identifier '${id}' is invalid. IDs may only contain alphanumeric characters, '_', and '-'. IDs must start with a letter or '_' and and must be less than 100 characters.`);
+        add(jobs, id, `The identifier '${id}' is invalid. IDs may only contain alphanumeric characters, '_', and '-'. IDs must start with a letter or '_' and must be less than 100 characters.`);
         continue;
       }
       if (!isObj(job)) { add(jobs, id, `Unexpected value '${toStr(job)}'`); continue; }
@@ -340,7 +343,7 @@
       job.steps.forEach((step, i) => {
         if (!isObj(step)) { add(job.steps, i, `Unexpected value '${toStr(step)}'`); return; }
         unexpected(step, STEP);
-        if (step.uses == null && step.run == null) add(job.steps, i, "Every step must define a `uses` or `run` key");
+        if (step.uses == null && step.run == null) add(job.steps, i, "There's not enough info to determine what you meant. Add one of these properties: run, uses");
         if (step.uses != null && step.run != null) add(step, "run", "Unexpected value 'run'");
         if (step.uses != null && !/^(\.\/|docker:\/\/)/.test(toStr(step.uses)) && !/^[^/@\s]+\/[^@\s]+@\S+$/.test(toStr(step.uses))) {
           add(step, "uses", `Expected format {org}/{repo}[/path]@ref. Actual '${toStr(step.uses)}'`);
@@ -388,6 +391,8 @@
     push: { label: "Push to main", name: "push", ref: "refs/heads/main", changed: ["src/cart.js"], message: "Fix the cart total" },
     "push-branch": { label: "Push to feature/login", name: "push", ref: "refs/heads/feature/login", changed: ["src/login.js"], message: "Add the login form" },
     "push-docs": { label: "Push a docs-only change", name: "push", ref: "refs/heads/main", changed: ["docs/setup.md"], message: "Update the setup guide" },
+    "pr-docs": { label: "Pull request changing only docs", name: "pull_request", ref: "refs/pull/46/merge", head: "docs/typo", changed: ["docs/setup.md"], title: "Fix a typo in the setup guide", number: 46 },
+    "merge-queue": { label: "Merge queue checks the pull request", name: "merge_group", ref: "refs/heads/gh-readonly-queue/main/pr-42-5d6e7f8", head: "feature/login", changed: ["src/login.js"], title: "Add the login form", number: 42 },
     "push-tag": { label: "Push tag v1.4.0", name: "push", ref: "refs/tags/v1.4.0", changed: [], message: "Release 1.4.0" },
     pr: { label: "Pull request from a branch", name: "pull_request", ref: "refs/pull/42/merge", head: "feature/login", changed: ["src/login.js"], title: "Add the login form", number: 42 },
     fork: { label: "Pull request from a fork", name: "pull_request", ref: "refs/pull/43/merge", head: "patch-1", fork: true, changed: ["src/cart.js"], title: "Fix typo in the cart", number: 43 },
@@ -405,7 +410,7 @@
     ev.inputs = inputs || {};
     ev.branch = ev.ref.startsWith("refs/heads/") ? ev.ref.slice(11) : null;
     ev.tag = ev.ref.startsWith("refs/tags/") ? ev.ref.slice(10) : null;
-    ev.base = ev.name.startsWith("pull_request") ? world.repo.defaultBranch : null;
+    ev.base = ev.name.startsWith("pull_request") || ev.name === "merge_group" ? world.repo.defaultBranch : null;
     return ev;
   }
 
@@ -428,6 +433,11 @@
       if (tagF && !branchF) return `A push to ${ev.branch} does not start a push trigger that lists only tags.`;
       if ("branches" in f && !filterMatch(f.branches, ev.branch)) return `Branch ${ev.branch} does not match \`branches: ${JSON.stringify([].concat(f.branches))}\`.`;
       if ("branches-ignore" in f && filterMatch(f["branches-ignore"], ev.branch)) return `Branch ${ev.branch} matches \`branches-ignore\`.`;
+    }
+    if (ev.name === "merge_group") {
+      if (f.types && ![].concat(f.types).map(toStr).includes("checks_requested")) return "The merge queue sends checks_requested, which is not in `types`.";
+      if ("branches" in f && !filterMatch(f.branches, ev.base)) return `The merge queue targets ${ev.base}, which does not match \`branches\`.`;
+      return null;
     }
     if (ev.name.startsWith("pull_request")) {
       const types = f.types ? [].concat(f.types).map(toStr) : ["opened", "synchronize", "reopened"];
@@ -517,7 +527,7 @@
   }
 
   const NODE20_WARNING = (list) => `Node.js 20 actions are deprecated. The following actions are running on Node.js 20 and may not work as expected: ${list.join(", ")}. ` +
-    "Actions will be forced to run with Node.js 24 by default starting June 2nd, 2026. Please check if updated versions of these actions are available that support Node.js 24. " +
+    "Actions will be forced to run with Node.js 24 by default starting June 16th, 2026. Node.js 20 will be removed from the runner on September 23rd, 2026. Please check if updated versions of these actions are available that support Node.js 24. " +
     "To opt into Node.js 24 now, set the FORCE_JAVASCRIPT_ACTIONS_TO_NODE24=true environment variable on the runner or in your workflow file. " +
     "Once Node.js 24 becomes the default, you can temporarily opt out by setting ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION=true. " +
     "For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/";
@@ -533,12 +543,17 @@
       sx.ws = { ...sx.world.repo.files, ...sx.files, ...(head || (sx.ev.fork && sx.ev.name === "pull_request") ? sx.world.forkFiles || {} : {}) };
       if (head && sx.ev.name === "pull_request_target") sx.untrusted = true;
       sx.fetchDepth = w["fetch-depth"] == null ? 1 : Number(w["fetch-depth"]);
+      // A token other than the GITHUB_TOKEN is kept for later pushes; their events start workflows.
+      sx.pushToken = w.token && toStr(w.token) !== sx.secrets.GITHUB_TOKEN ? (toStr(w.token) ? "other" : "empty") : "github";
+      const lfs = w.lfs === true || toStr(w.lfs) === "true";
+      if (lfs) Object.assign(sx.ws, sx.world.lfs || {});
       sx.persisted = w["persist-credentials"] !== false && toStr(w["persist-credentials"]) !== "false";
       return { lines: [`Syncing repository: ${repo}`, "Getting Git version info", `Temporarily overriding HOME='/home/runner/work/_temp/7d3a' before making global git config changes`,
         `Adding repository directory to the temporary git global config as a safe directory`, `/usr/bin/git config --global --add safe.directory ${WORK}`,
         `Deleting the contents of '${WORK}'`, "Initializing the repository", "Fetching the repository",
         head ? `Determining the checkout info` : "Determining the checkout info", `Checking out the ref`,
-        `/usr/bin/git log -1 --format=%H`, head ? sx.github.event.pull_request.head.sha : sx.github.sha], secs: 2 };
+        ...(lfs ? ["Fetching LFS objects", "/usr/bin/git lfs fetch origin " + (sx.github.sha || "")] : []),
+        `/usr/bin/git log -1 --format=%H`, head ? sx.github.event.pull_request.head.sha : sx.github.sha], secs: lfs ? 6 : 2 };
     },
     "actions/setup-node": (sx, w) => {
       const v = toStr(w["node-version"] || (sx.ws && sx.ws[".nvmrc"]) || "").trim();
@@ -698,11 +713,11 @@
     const end = () => { if (word) out.push(word); word = null; };
     while (i < line.length) {
       const c = line[i];
-      if (c === "'") { const j = line.indexOf("'", i + 1); if (j < 0) throw new Error("unexpected EOF while looking for matching `''"); push(line.slice(i + 1, j), "'"); i = j + 1; continue; }
+      if (c === "'") { const j = line.indexOf("'", i + 1); if (j < 0) throw new ShellSyntax("unexpected EOF while looking for matching `''"); push(line.slice(i + 1, j), "'"); i = j + 1; continue; }
       if (c === '"') {
         let j = i + 1, s = "";
         while (j < line.length && line[j] !== '"') { if (line[j] === "\\" && j + 1 < line.length) { s += /["\\$`]/.test(line[j + 1]) ? line[j + 1] : "\\" + line[j + 1]; j += 2; continue; } s += line[j++]; }
-        if (j >= line.length) throw new Error("unexpected EOF while looking for matching `\"'");
+        if (j >= line.length) throw new ShellSyntax("unexpected EOF while looking for matching `\"'");
         push(s, '"'); i = j + 1; continue;
       }
       if (c === "$" && line[i + 1] === "(") {
@@ -721,15 +736,15 @@
     return out;
   }
 
-  function runScript(script, sx, opts) {
-    const lines = [];
-    const state = { code: 0, exited: false, secs: 0, hang: false, background: [] };
+  const headOf = (list) => (list.length && typeof list[0] !== "string" ? list[0].map((p) => p[0]).join("") : "");
+
+  // Split a script into statements: and-or lists, with their line and any here-document.
+  function statements(script) {
     const src = script.replace(/\\\n/g, " ").split("\n");
-    const ifs = []; // stack of { active, taken }
-    const active = () => ifs.every((f) => f.active);
-    for (let n = 0; n < src.length && !state.exited; n++) {
+    const out = [];
+    for (let n = 0; n < src.length; n++) {
       let text = src[n];
-      // A here-document feeds the lines up to its delimiter to the command.
+      const ln = n + 1;
       const hd = /<<-?\s*['"]?(\w+)['"]?/.exec(text);
       let stdin = null;
       if (hd) {
@@ -739,43 +754,99 @@
         stdin = body.join("\n") + "\n";
         text = text.replace(hd[0], "");
       }
-      let toks;
-      try { toks = shellTokens(text); } catch (e) { lines.push([`${SCRIPT}: line ${n + 1}: ${e.message}`, "err"]); state.code = 2; state.exited = true; break; }
-      // Split into and-or lists on ; and &.
       const lists = [[]];
       const bg = [];
-      for (const t of toks) { if (t === ";" || t === "&") { bg[lists.length - 1] = t === "&"; lists.push([]); } else lists[lists.length - 1].push(t); }
-      for (let li = 0; li < lists.length && !state.exited; li++) {
-        let list = lists[li];
-        if (!list.length) continue;
-        const first = typeof list[0] !== "string" ? list[0].map((p) => p[0]).join("") : "";
-        if (first === "then" || first === "else" || first === "do") {
-          if (first === "else" && ifs.length) { const f = ifs[ifs.length - 1]; f.active = !f.taken && ifs.slice(0, -1).every((x) => x.active); }
-          list = list.slice(1);
-          if (!list.length) continue;
-        }
-        const head = typeof list[0] !== "string" ? list[0].map((p) => p[0]).join("") : "";
-        if (head === "fi" || head === "done") { if (head === "fi") ifs.pop(); continue; }
-        if (head === "if" || head === "elif") {
-          const parentActive = head === "if" ? active() : ifs.slice(0, -1).every((f) => f.active);
-          let ok = false;
-          if (parentActive && !(head === "elif" && ifs.length && ifs[ifs.length - 1].taken)) ok = andOr(list.slice(1), sx, state, lines, n + 1, null, true) === 0;
-          if (head === "if") ifs.push({ active: ok, taken: ok });
-          else if (ifs.length) { const f = ifs[ifs.length - 1]; f.active = ok; f.taken = f.taken || ok; }
-          continue;
-        }
-        if (head === "for" || head === "while" || head === "until" || head === "case") {
-          lines.push([`(the playground does not run \`${head}\` loops; the commands inside run once)`, "dim"]);
-          continue;
-        }
-        if (!active()) continue;
-        if (bg[li]) { state.background.push(list); runBackground(list, sx, state, lines, n + 1); continue; }
-        const code = andOr(list, sx, state, lines, n + 1, li === 0 ? stdin : null, false);
-        if (state.hang) return { lines, code: 0, secs: Infinity, hang: true };
-        if (code !== 0 && opts.errexit && sx.errexit !== false && !state.guarded) { state.code = code; state.exited = true; }
-        state.code = code;
-      }
+      for (const t of shellTokens(text)) { if (t === ";" || t === "&") { bg[lists.length - 1] = t === "&"; lists.push([]); } else lists[lists.length - 1].push(t); }
+      lists.forEach((list, i) => {
+        // Keywords that carry a command after them (then echo, do echo) become two statements.
+        let rest = list;
+        while (/^(then|do|else)$/.test(headOf(rest))) { out.push({ kw: headOf(rest), ln }); rest = rest.slice(1); }
+        if (!rest.length) return;
+        const head = headOf(rest);
+        if (/^(fi|done)$/.test(head)) out.push({ kw: head, ln });
+        else if (/^(if|elif|while|until|for)$/.test(head)) out.push({ kw: head, list: rest.slice(1), ln });
+        else out.push({ list: rest, bg: !!bg[i], ln, stdin: i === 0 ? stdin : null });
+      });
     }
+    return out;
+  }
+
+  // Group statements into if, for and while blocks.
+  function blocks(stmts) {
+    let k = 0;
+    const expect = (kw) => {
+      if (stmts[k] && stmts[k].kw === kw) { k++; return; }
+      throw new ShellSyntax(stmts[k] ? `line ${stmts[k].ln}: syntax error near unexpected token \`${stmts[k].kw || headOf(stmts[k].list)}'` : `line ${(stmts[stmts.length - 1] || { ln: 1 }).ln}: syntax error: unexpected end of file`);
+    };
+    const block = (stops) => {
+      const out = [];
+      while (k < stmts.length) {
+        const st = stmts[k];
+        if (st.kw && stops.includes(st.kw)) return out;
+        k++;
+        if (!st.kw) out.push({ type: "cmd", st });
+        else if (st.kw === "if") {
+          const node = { type: "if", branches: [], els: null };
+          expect("then");
+          node.branches.push([st, block(["elif", "else", "fi"])]);
+          while (stmts[k] && stmts[k].kw === "elif") { const c = stmts[k++]; expect("then"); node.branches.push([c, block(["elif", "else", "fi"])]); }
+          if (stmts[k] && stmts[k].kw === "else") { k++; node.els = block(["fi"]); }
+          expect("fi");
+          out.push(node);
+        } else if (st.kw === "for" || st.kw === "while" || st.kw === "until") {
+          expect("do");
+          const body = block(["done"]);
+          expect("done");
+          out.push({ type: st.kw, st, body });
+        } else throw new ShellSyntax(`line ${st.ln}: syntax error near unexpected token \`${st.kw}'`);
+      }
+      if (stops.length) throw new ShellSyntax(`line ${(stmts[stmts.length - 1] || { ln: 1 }).ln}: syntax error: unexpected end of file`);
+      return out;
+    };
+    return block([]);
+  }
+
+  const MAX_LOOP = 10000;
+  function runScript(script, sx, opts) {
+    const lines = [];
+    sx.substErr = sx.substErr || [];
+    const state = { code: 0, exited: false, secs: 0, hang: false };
+    let tree;
+    try { tree = blocks(statements(script)); } catch (e) { if (!(e instanceof ShellSyntax)) throw e; lines.push([`${SCRIPT}: ${/^line /.test(e.message) ? e.message : "line 1: " + e.message}`, "err"]); return { lines, code: 2, secs: 0, hang: false }; }
+    const stop = () => state.exited || state.hang;
+    const test = (st) => andOr(st.list, sx, state, lines, st.ln, null, true) === 0;
+    const run = (nodes) => {
+      for (const node of nodes) {
+        if (stop()) return;
+        if (node.type === "if") {
+          const branch = node.branches.find(([c]) => !stop() && test(c));
+          if (stop()) return;
+          run(branch ? branch[1] : node.els || []);
+        } else if (node.type === "for") {
+          const [name, inWord, ...items] = node.st.list.filter((t) => typeof t !== "string");
+          if (!name) throw new ShellSyntax(`line ${node.st.ln}: syntax error near unexpected token \`do'`);
+          const values = inWord && expandWord(inWord, sx, state) === "in"
+            ? items.flatMap((w) => { const v = expandWord(w, sx, state); return w.some(([, q]) => q) ? [v] : v.split(/\s+/).filter(Boolean); }) : [];
+          for (const v of values.slice(0, MAX_LOOP)) { sx.env[expandWord(name, sx, state)] = v; run(node.body); if (stop()) return; }
+        } else if (node.type === "while" || node.type === "until") {
+          let n = 0;
+          while (!stop() && test(node.st) === (node.type === "while")) {
+            if (++n > MAX_LOOP) { state.hang = true; return; }
+            run(node.body);
+          }
+        } else {
+          const { list, bg, ln, stdin } = node.st;
+          if (headOf(list) === "case") { lines.push(["(the playground does not run `case` statements)", "dim"]); continue; }
+          if (bg) { runBackground(list, sx, state, lines, ln); continue; }
+          const code = andOr(list, sx, state, lines, ln, stdin, false);
+          if (state.hang) return;
+          if (code !== 0 && opts.errexit && sx.errexit !== false && !state.guarded) { state.code = code; state.exited = true; return; }
+          state.code = code;
+        }
+      }
+    };
+    try { run(tree); } catch (e) { if (!(e instanceof ShellSyntax)) throw e; lines.push([`${SCRIPT}: ${e.message}`, "err"]); return { lines, code: 2, secs: state.secs, hang: false }; }
+    if (state.hang) return { lines, code: 0, secs: Infinity, hang: true };
     return { lines, code: state.code, secs: state.secs, hang: false };
   }
 
@@ -915,6 +986,18 @@
     const ws = () => sx.ws || null;
     const file = (p) => { const k = p.replace(/^\.\//, "").replace(new RegExp("^" + WORK.replace(/[/.]/g, "\\$&") + "/"), ""); return ws() && k in ws() ? ws()[k] : null; };
     const notFound = () => fail(`${SCRIPT}: line ${ln}: ${cmd}: command not found`, 127);
+    // Windows shells: pwsh aliases some Unix names to cmdlets with other options, and cmd knows none.
+    if (sx.dialect === "pwsh" || sx.dialect === "powershell") {
+      const flag = args.find((x) => /^-[a-z]{2,}$/.test(x));
+      if ((cmd === "rm" || cmd === "cp" || cmd === "mv") && flag) return fail([`${{ rm: "Remove-Item", cp: "Copy-Item", mv: "Move-Item" }[cmd]}: A parameter cannot be found that matches parameter name '${flag.slice(1)}'.`]);
+      if (["export", "test", "[", "source", "grep", "sed", "awk", "base64", "wc", "head", "tail", "touch", "df", "du", "sudo", "true", "false", "seq", "chmod", "printenv"].includes(cmd)) {
+        return fail([`${cmd}: The term '${cmd}' is not recognized as a name of a cmdlet, function, script file, or executable program.`, "Check the spelling of the name, or if a path was included, verify that the path is correct and try again."]);
+      }
+    }
+    if (sx.dialect === "cmd" && !["echo", "cd", "npm", "npx", "node", "git", "gh", "python", "pip", "set", "exit", "mkdir", "dir", "type", "copy", "del", "docker", "curl"].includes(cmd)) {
+      return fail([`'${cmd}' is not recognized as an internal or external command,`, "operable program or batch file."]);
+    }
+    if (sx.dialect === "cmd" && cmd === "mkdir" && args.includes("-p")) return fail(["The syntax of the command is incorrect."]);
     const custom = sx.world.tools && Object.keys(sx.world.tools).sort((a, b) => b.length - a.length).find((k) => words.join(" ") === k || words.join(" ").startsWith(k + " "));
     if (custom) {
       const r = sx.world.tools[custom](words, sx, stdin) || {};
@@ -931,6 +1014,7 @@
         return workflowCommand(sx, s) ?? out(s + nl);
       }
       case "printf": { const fmt = args[0] || ""; let k = 1; return out(fmt.replace(/%[sd]/g, () => args[k++] || "").replace(/\\n/g, "\n").replace(/\\t/g, "\t")); }
+      case "seq": { const [a, b] = args.length > 1 ? [Number(args[0]), Number(args[1])] : [1, Number(args[0])]; if (!Number.isFinite(a) || !Number.isFinite(b)) return fail(`seq: invalid floating point argument: '${args[0] || ""}'`); const n = Math.max(0, Math.min(100000, b - a + 1)); return out(Array.from({ length: n }, (_, i) => a + i).join("\n") + (n ? "\n" : "")); }
       case "true": case ":": return out("");
       case "false": return out("", 1);
       case "exit": { state.exited = true; state.code = Number(args[0] || 0) || 0; return { out: "", err: [], code: state.code }; }
@@ -1004,7 +1088,10 @@
         return out(hits.join("\n") + (hits.length ? "\n" : ""), hits.length ? 0 : 1);
       }
       case "wc": { const text = args.length && !args[args.length - 1].startsWith("-") ? file(args[args.length - 1]) || "" : stdin || ""; return out(String(text.split("\n").length - (text.endsWith("\n") ? 1 : 0)) + "\n"); }
-      case "head": case "tail": { const text = stdin || ""; const n = Number((/^-(?:n\s*)?(\d+)$/.exec(args[0] || "") || [])[1] || (args[0] === "-n" ? args[1] : 10)); const rows = text.replace(/\n$/, "").split("\n"); return out((cmd === "head" ? rows.slice(0, n) : rows.slice(-n)).join("\n") + "\n"); }
+      case "head": case "tail": {
+        const src = args.filter((x, i) => !x.startsWith("-") && args[i - 1] !== "-n");
+        if (src.length && file(src[0]) == null) return fail(`${cmd}: cannot open '${src[0]}' for reading: No such file or directory`);
+        const text = src.length ? file(src[0]) : stdin || ""; const n = Number((/^-(?:n\s*)?(\d+)$/.exec(args[0] || "") || [])[1] || (args[0] === "-n" ? args[1] : 10)); const rows = text.replace(/\n$/, "").split("\n"); return out((cmd === "head" ? rows.slice(0, n) : rows.slice(-n)).join("\n") + "\n"); }
       case "tee": { for (const a of args.filter((x) => !x.startsWith("-"))) writeFile(sx, a, stdin || "", args.includes("-a")); return out(stdin || ""); }
       case "env": case "printenv": return out(Object.entries(sx.env).map(([k, v]) => `${k}=${v}`).sort().join("\n") + "\n");
       case "date": return out("Fri Oct 30 09:14:07 UTC 2026\n");
@@ -1027,11 +1114,19 @@
       case "docker": return docker(args, sx, out, fail, file, stdin);
       case "gh": return gh(args, sx, out, fail);
       case "git": {
+        if (args[0] === "tag" && args[1] && !args[1].startsWith("-")) { if (!sx.ws) return fail(["fatal: not a git repository (or any of the parent directories): .git"], 128); (sx.tags = sx.tags || []).push(args[1]); return out(""); }
         if (args[0] === "push") {
-          if (!sx.persisted && !sx.env.GH_TOKEN) return fail(["fatal: could not read Username for 'https://github.com': No such device or address"], 128);
+          if (!sx.ws) return fail(["fatal: not a git repository (or any of the parent directories): .git"], 128);
+          if (sx.pushToken === "empty" || (!sx.persisted && !sx.env.GH_TOKEN)) return fail(["fatal: could not read Username for 'https://github.com': No such device or address"], 128);
+          const tags = args.includes("--tags") ? sx.tags || [] : args.filter((a) => (sx.tags || []).includes(a));
+          if (sx.pushToken === "other") {
+            for (const t of tags) sx.effects.pushedTags.push({ tag: t, by: "other" });
+            return out(`To https://github.com/${FULL}\n${tags.map((t) => ` * [new tag]         ${t} -> ${t}`).join("\n")}\n`, 0, 2);
+          }
           if (!can(sx.perms, "contents", "write")) return fail([`remote: Permission to ${FULL}.git denied to github-actions[bot].`, `fatal: unable to access 'https://github.com/${FULL}/': The requested URL returned error: 403`], 128, 1);
           sx.effects.pushed = true;
-          return out(`To https://github.com/${FULL}\n   1a2b3c4..5d6e7f8  main -> main\n`, 0, 2);
+          for (const t of tags) sx.effects.pushedTags.push({ tag: t, by: "github" });
+          return out(`To https://github.com/${FULL}\n${tags.length ? tags.map((t) => ` * [new tag]         ${t} -> ${t}`).join("\n") : "   1a2b3c4..5d6e7f8  main -> main"}\n`, 0, 2);
         }
         if (args[0] === "describe") {
           if (!sx.ws) return fail(["fatal: not a git repository (or any of the parent directories): .git"], 128);
@@ -1188,7 +1283,31 @@
     if (a === "release" && b === "create") {
       if (!can(perms, "contents", "write")) return fail([`HTTP 403: Resource not accessible by integration (https://api.github.com/repos/${FULL}/releases)`], 1, 1);
       sx.effects.released = args[2] || true;
+      if (args[2]) sx.effects.pushedTags.push({ tag: args[2], by: token === sx.secrets.GITHUB_TOKEN ? "github" : "other" });
       return out(`https://github.com/${FULL}/releases/tag/${args[2] || "v1.4.0"}\n`, 0, 2);
+    }
+    if (a === "workflow" && b === "run") {
+      const file = args[2] || "";
+      if (token === sx.secrets.GITHUB_TOKEN && !can(perms, "actions", "write")) return fail([`HTTP 403: Resource not accessible by integration (https://api.github.com/repos/${FULL}/actions/workflows/${file}/dispatches)`], 1, 1);
+      const ref = args.includes("--ref") ? args[args.indexOf("--ref") + 1] : args.includes("-r") ? args[args.indexOf("-r") + 1] : sx.world.repo.defaultBranch;
+      const inputs = {};
+      args.forEach((x, i) => { if ((x === "-f" || x === "-F") && args[i + 1]) { const [k, ...v] = args[i + 1].split("="); inputs[k] = v.join("="); } });
+      sx.effects.dispatched.push({ file, ref, inputs });
+      return out(`✓ Created workflow_dispatch event for ${file} at ${ref}\n`, 0, 1);
+    }
+    if (a === "api" || (a === "pr" && b === "list")) {
+      // The GITHUB_TOKEN allows 1,000 REST requests an hour per repository.
+      const app = sx.world.app || {};
+      const total = app.prCount || 40;
+      const paged = a === "pr" || args.includes("--paginate");
+      const perPage = a === "pr" ? 100 : Number((/per_page=(\d+)/.exec(args.join(" ")) || [])[1]) || 30;
+      const calls = paged ? Math.ceil(total / Math.min(100, perPage)) : 1;
+      sx.apiCalls = (sx.apiCalls || 0) + calls;
+      if (token === sx.secrets.GITHUB_TOKEN && sx.apiCalls > 1000) return fail([`HTTP 403: API rate limit exceeded for installation ID 41806354. (https://api.github.com/${(b || "").replace(/^\//, "")})`], 1, 0.3);
+      const m = /pulls\/(\d+)/.exec(b || "");
+      if (m) return out(`Pull request ${m[1]}\n`, 0, 0.3);
+      if (paged) return out(Array.from({ length: total }, (_, i) => `Pull request ${i + 1}`).join("\n") + "\n", 0, calls * 0.4);
+      return out("{}\n", 0, 0.3);
     }
     if (a === "pr" && (b === "edit" || b === "merge" || b === "review")) {
       if (!can(perms, "pull-requests", "write")) return fail([`GraphQL: Resource not accessible by integration (${b === "merge" ? "mergePullRequest" : "updatePullRequest"})`], 1, 1);
@@ -1204,6 +1323,7 @@
     if (/deploy\.sh$/.test(name)) {
       const target = args[0];
       if (!target) return fail(["deploy: no environment given (usage: deploy.sh <staging|production>)"], 2);
+      if (app.needsImage && !sx.env.IMAGE) return fail(["deploy: IMAGE is empty; nothing to deploy"], 1);
       if (app.needsDist && !(sx.ws && sx.ws["dist/index.html"] != null)) return fail(["deploy: dist/index.html not found; nothing to ship"], 1);
       if (!sx.env.DEPLOY_TOKEN) return fail([`deploy: DEPLOY_TOKEN is empty; cannot authenticate to ${target}`], 1, 1);
       if (sx.untrusted) sx.effects.pwned = true;
@@ -1255,7 +1375,8 @@
         head: { ref: ev.head, sha: hash("head:" + ev.id), repo: { full_name: ev.fork ? `drive-by-contributor/${REPO}` : FULL, fork: !!ev.fork } },
         base: { ref: world.repo.defaultBranch, sha: hash("base:" + ev.id), repo: { full_name: FULL } } },
       repository: { full_name: FULL, private: world.repo.visibility === "private" }
-    } : ev.name === "workflow_dispatch" ? { inputs: ev.inputs, ref: ev.ref } : ev.name === "schedule" ? { schedule: toStr((wf.on.schedule || [])[0] && wf.on.schedule[0].cron) }
+    } : ev.name === "merge_group" ? { action: "checks_requested", merge_group: { head_sha: hash("mq:" + ev.id), head_ref: ev.ref, base_ref: `refs/heads/${world.repo.defaultBranch}`, base_sha: hash("base:" + ev.id) } }
+      : ev.name === "workflow_dispatch" ? { inputs: ev.inputs, ref: ev.ref } : ev.name === "schedule" ? { schedule: toStr((wf.on.schedule || [])[0] && wf.on.schedule[0].cron) }
       : { ref: ev.ref, before: hash("before"), after: sha, head_commit: { id: sha, message: ev.message || "" }, commits: [{ id: sha, message: ev.message || "" }], repository: { full_name: FULL, default_branch: world.repo.defaultBranch } };
     const prRef = ev.name === "pull_request";
     return {
@@ -1272,7 +1393,7 @@
   function runWorkflow(world, files, file, ev, opts) {
     const store = opts.store;
     const run = { base: store.time, id: 18000000000 + store.runs, number: 40 + store.runs, file, event: ev, version: opts.version || world.version || 42, jobs: [], errors: [], annotations: [],
-      effects: { leaks: [], sentOut: [], remote: [], deployed: [], oidc: [], shards: [], pwned: false }, cache: [], waiting: [], start: opts.start || 0 };
+      effects: { leaks: [], sentOut: [], remote: [], deployed: [], oidc: [], shards: [], pushedTags: [], dispatched: [], pwned: false }, cache: [], waiting: [], start: opts.start || 0 };
     store.runs++;
     const text = files[file];
     if (text == null) { run.status = "missing"; run.reason = `${file} does not exist.`; return run; }
@@ -1498,7 +1619,7 @@
     const j = { key: opts.key, id, name, needs: opts.needs, status: "completed", conclusion: "success", steps: [], start: startAt, end: startAt, outputs: {}, node20: [] };
     const fail = (note) => { j.conclusion = "failure"; j.note = note; return j; };
     let runsOn;
-    try { runsOn = value(job["runs-on"], { data: ctx }); } catch (e) { return fail(e.message); }
+    try { runsOn = value(job["runs-on"], { data: ctx }); } catch (e) { if (!(e instanceof ExprError)) throw e; return fail(e.message); }
     const labels = [].concat(isObj(runsOn) ? runsOn.labels || [] : runsOn).map(toStr);
     j.runsOn = labels.join(", ");
     const hosted = ["ubuntu-latest", "ubuntu-24.04", "ubuntu-22.04", "ubuntu-24.04-arm", "ubuntu-22.04-arm", "windows-latest", "windows-2025", "windows-2022", "macos-latest", "macos-15", "macos-14", "macos-26"];
@@ -1517,7 +1638,7 @@
     j.os = /windows/.test(labels[0]) ? "Windows" : /macos/.test(labels[0]) ? "macOS" : "Linux";
     // Environment protection.
     let envName = null;
-    try { envName = job.environment == null ? null : toStr(isObj(job.environment) ? value(job.environment.name, { data: ctx }) : value(job.environment, { data: ctx })) || null; } catch (e) { return fail(e.message); }
+    try { envName = job.environment == null ? null : toStr(isObj(job.environment) ? value(job.environment.name, { data: ctx }) : value(job.environment, { data: ctx })) || null; } catch (e) { if (!(e instanceof ExprError)) throw e; return fail(e.message); }
     const envKey = envName && world.environments ? Object.keys(world.environments).find((k) => k.toLowerCase() === envName.toLowerCase()) : null;
     const envSpec = envKey ? world.environments[envKey] : null;
     if (envKey) envName = envKey;
@@ -1572,7 +1693,7 @@
     try {
       for (const [k, v] of Object.entries(isObj(opts.wf.env) ? opts.wf.env : {})) wfEnv[k] = toStr(value(v, { data: { ...ctx, secrets, env: {} } }));
       for (const [k, v] of Object.entries(isObj(job.env) ? job.env : {})) jobEnv[k] = toStr(value(v, { data: { ...ctx, secrets, env: wfEnv } }));
-    } catch (e) { return fail(e.message); }
+    } catch (e) { if (!(e instanceof ExprError)) throw e; return fail(e.message); }
     let userEnv = { ...wfEnv, ...jobEnv };
 
     // Set up job: runner, token, actions.
@@ -1631,9 +1752,13 @@
           const header = [];
           if (step.run != null) {
             const scriptText = interpolate(toStr(step.run), sctx());
-            const shell = toStr(step.shell || (isObj(job.defaults) && isObj(job.defaults.run) && job.defaults.run.shell) || (isObj(opts.wf.defaults) && isObj(opts.wf.defaults.run) && opts.wf.defaults.run.shell) || "");
+            // Windows runners default to pwsh; Linux and macOS to bash -e.
+            const shell = toStr(step.shell || (isObj(job.defaults) && isObj(job.defaults.run) && job.defaults.run.shell) || (isObj(opts.wf.defaults) && isObj(opts.wf.defaults.run) && opts.wf.defaults.run.shell) || (j.os === "Windows" ? "pwsh" : ""));
             header.push(...scriptText.replace(/\n$/, "").split("\n").map((l) => ["  " + l, "cmd"]));
-            const shellLine = !shell ? "/usr/bin/bash -e {0}" : shell === "bash" ? "/usr/bin/bash --noprofile --norc -e -o pipefail {0}" : shell === "sh" ? "sh -e {0}" : shell;
+            const win = j.os === "Windows";
+            const shellLine = !shell ? "/usr/bin/bash -e {0}" : shell === "bash" ? (win ? "C:\\Program Files\\Git\\bin\\bash.EXE" : "/usr/bin/bash") + " --noprofile --norc -e -o pipefail {0}"
+              : shell === "sh" ? "/usr/bin/sh -e {0}" : shell === "pwsh" ? (win ? "C:\\Program Files\\PowerShell\\7\\pwsh.EXE" : "/usr/bin/pwsh") + " -command \". '{0}'\""
+                : shell === "powershell" ? "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.EXE -command \". '{0}'\"" : shell === "cmd" ? "C:\\Windows\\system32\\cmd.EXE /D /E:ON /V:OFF /S /C \"CALL \"{0}\"\"" : shell;
             header.push([`  shell: ${shellLine}`, "dim"]);
             const allEnv = { ...userEnv, ...stepEnv };
             if (Object.keys(allEnv).length) header.push(["  env:", "dim"], ...Object.entries(allEnv).map(([k, v]) => [`    ${k}: ${v}`, "dim"]));
@@ -1642,8 +1767,9 @@
               GITHUB_ACTOR: ctx.github.actor, GITHUB_OUTPUT: FILES.output, GITHUB_ENV: FILES.env, GITHUB_STEP_SUMMARY: FILES.summary, GITHUB_PATH: FILES.path, ...allEnv };
             if (sx.aws) Object.assign(sx.env, { AWS_ACCESS_KEY_ID: "ASIA_PLAYGROUND_ONLY", AWS_REGION: "eu-west-1" });
             sx.pipefail = shell === "bash";
-            sx.errexit = true;
-            if (!/^(bash|sh|)$/.test(shell)) {
+            sx.errexit = shell !== "cmd";
+            sx.dialect = /^(pwsh|powershell|cmd)$/.test(shell) ? shell : null;
+            if (!/^(bash|sh|pwsh|powershell|cmd|)$/.test(shell)) {
               rec.lines.push(...header, [`(the playground runs bash scripts; this ${shell} script is shown but not run)`, "dim"]);
             } else {
               const r = runScript(scriptText, sx, { errexit: true });
@@ -1662,12 +1788,12 @@
             if (uses.startsWith("./")) {
               const dir = uses.slice(2).replace(/\/$/, "");
               const manifest = sx.ws && (sx.ws[dir + "/action.yml"] != null ? dir + "/action.yml" : sx.ws[dir + "/action.yaml"] != null ? dir + "/action.yaml" : null);
-              if (!manifest) throw new Error(`Can't find 'action.yml', 'action.yaml' or 'Dockerfile' under '${WORK}/${dir}'. Did you forget to run actions/checkout before running your local action?`);
+              if (!manifest) throw new StepError(`Can't find 'action.yml', 'action.yaml' or 'Dockerfile' under '${WORK}/${dir}'. Did you forget to run actions/checkout before running your local action?`);
               const text = files[manifest] != null ? files[manifest] : sx.ws[manifest];
               const p = parse(text);
-              if (p.error) throw new Error(`${WORK}/./${manifest}: ${p.error.message}`);
+              if (p.error) throw new StepError(`${WORK}/./${manifest}: ${p.error.message}`);
               const act = p.value;
-              if (!isObj(act) || !isObj(act.runs)) throw new Error(`${WORK}/./${manifest} (Line: 1, Col: 1): Required property is missing: runs`);
+              if (!isObj(act) || !isObj(act.runs)) throw new StepError(`${WORK}/./${manifest} (Line: 1, Col: 1): Required property is missing: runs`);
               if (toStr(act.runs.using) !== "composite") { rec.lines.push([`(the playground runs composite actions; this one uses ${toStr(act.runs.using)})`, "dim"]); }
               else {
                 const actInputs = {};
@@ -1675,7 +1801,7 @@
                 const inner = Array.isArray(act.runs.steps) ? act.runs.steps : [];
                 // The manifest is checked before any of its steps run.
                 const noShell = inner.find((st) => isObj(st) && st.run != null && st.shell == null);
-                if (noShell) { const p = at(noShell, "run"); throw new Error(`${WORK}/./${manifest} (Line: ${p ? p.line : 1}, Col: ${p ? p.col : 1}): Required property is missing: shell`); }
+                if (noShell) { const p = at(noShell, "run"); throw new StepError(`${WORK}/./${manifest} (Line: ${p ? p.line : 1}, Col: ${p ? p.col : 1}): Required property is missing: shell`); }
                 const before = j.steps.length;
                 runSteps(inner, actInputs, inner.map(() => null));
                 const sub = j.steps.splice(before);
@@ -1696,6 +1822,7 @@
             }
           }
         } catch (e) {
+          if (!(e instanceof ExprError || e instanceof StepError)) throw e;
           rec.lines.push([`Error: ${e.message}`, "err"]);
           outcome = "failure";
         }
@@ -1770,11 +1897,11 @@
     const store = opts.store || newStore();
     const file = world.workflow || Object.keys(files).find((f) => /^\.github\/workflows\//.test(f));
     const ev = eventFor(world, eventId, opts.inputs);
-    if (!ev.twice) return [runWorkflow(world, files, file, ev, { ...opts, store })];
+    if (!ev.twice) return withChecks(world, ev, followUps(world, files, file, [runWorkflow(world, files, file, ev, { ...opts, store })], { ...opts, store }));
     // Two pushes 30 seconds apart: the newer one is version 43.
     const a = runWorkflow(world, files, file, { ...ev }, { ...opts, store, version: 42, start: 0 });
     let b = runWorkflow(world, files, file, { ...ev }, { ...opts, store, version: 43, start: 30 });
-    if (a.status !== "completed" && a.status !== "waiting") return [a, b];
+    if (a.status !== "completed" && a.status !== "waiting") return withChecks(world, ev, [a, b]);
     const wf = a.wf;
     const wfc = concurrencyOf(wf, a, world);
     if (sameGroup(wfc, concurrencyOf(wf, b, world))) {
@@ -1795,7 +1922,45 @@
       }
       if (changed) b = runWorkflow(world, files, file, { ...ev }, { ...opts, store, version: 43, start: 30, notBefore });
     }
-    return [a, b];
+    return withChecks(world, ev, [a, b]);
+  }
+
+  // Events a run caused start other workflows, except events caused by the GITHUB_TOKEN
+  // (workflow_dispatch is the exception), so a workflow cannot start itself in a loop.
+  function followUps(world, files, main, runs, opts) {
+    const others = Object.keys(files).filter((f) => f !== main && /^\.github\/workflows\/[^/]+\.ya?ml$/.test(f));
+    const out = [...runs];
+    for (const r of runs) {
+      for (const t of r.effects.pushedTags.filter((x) => x.by !== "github")) {
+        for (const f of others) {
+          const ev = { ...eventFor(world, "push-tag"), ref: `refs/tags/${t.tag}`, tag: t.tag, branch: null, message: `Tag ${t.tag}`, label: `Tag ${t.tag} pushed by the workflow` };
+          const next = runWorkflow(world, files, f, ev, opts);
+          if (next.status !== "not-triggered") out.push(next);
+        }
+      }
+      for (const d of r.effects.dispatched) {
+        const f = others.find((x) => x.endsWith("/" + d.file));
+        if (!f) continue;
+        const ref = /^refs\//.test(d.ref) ? d.ref : (world.tags || []).includes(d.ref) || /^v\d/.test(d.ref) ? `refs/tags/${d.ref}` : `refs/heads/${d.ref}`;
+        const ev = { ...eventFor(world, "dispatch", d.inputs), ref, label: `${d.file} started by gh workflow run` };
+        ev.branch = ref.startsWith("refs/heads/") ? ref.slice(11) : null;
+        ev.tag = ref.startsWith("refs/tags/") ? ref.slice(10) : null;
+        out.push(runWorkflow(world, files, f, ev, opts));
+      }
+    }
+    return out;
+  }
+
+  // Required status checks, as the pull request's merge box shows them.
+  function withChecks(world, ev, runs) {
+    if (!world.requiredChecks || !(ev.name === "pull_request" || ev.name === "merge_group")) return runs;
+    const jobs = runs.flatMap((r) => r.jobs || []);
+    runs[0].required = world.requiredChecks.map((name) => {
+      const js = jobs.filter((j) => j.name === name);
+      const state = !js.length ? "expected" : js.some((j) => !j.conclusion) ? "pending" : js.every((j) => j.conclusion === "success" || j.conclusion === "skipped") ? "success" : "failure";
+      return { name, state };
+    });
+    return runs;
   }
 
   function cancelAfter(run, t, group) {

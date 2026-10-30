@@ -548,3 +548,11 @@ pre.start .cm { color: var(--muted); }
 @media (prefers-color-scheme: dark) {
   .run-icon, .job-icon { color: #000; }
 }
+
+/* The merge box under a pull request run */
+.merge-box { margin-top: 12px; padding: 12px 14px; border-radius: 12px; background: var(--ok-soft); font-size: .86rem; }
+.merge-box.blocked { background: var(--bad-soft); }
+.merge-box p { margin: 0 0 6px; }
+.merge-box ul { margin: 0; padding-left: 18px; }
+.merge-box li.expected, .merge-box li.failure { color: var(--bad); }
+.merge-box li.success { color: var(--ok); }

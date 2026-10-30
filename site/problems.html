@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'none'; base-uri 'none'; form-action 'none'">
-  <meta name="description" content="GitHub Actions errors and how to fix them: 40 error messages, each with the cause, how to confirm it, the fix and how to prevent it.">
+  <meta name="description" content="GitHub Actions errors and how to fix them: 45 error messages, each with the cause, how to confirm it, the fix and how to prevent it.">
   <meta property="og:title" content="GitHub Actions errors and fixes · Actions Quest">
   <meta property="og:description" content="Every common GitHub Actions error message, with cause, confirmation, fix and prevention.">
   <meta property="og:type" content="article">
@@ -23,7 +23,7 @@
   </header>
   <main class="wrap">
     <h1 class="problems-title">GitHub Actions errors and fixes</h1>
-    <p class="lede">40 error messages from real runs. Each has the exact text, the cause, how to confirm it, the fix, how to prevent it, and a scenario to practise on in the <a href="index.html#playground">playground</a>.</p>
+    <p class="lede">45 error messages from real runs. Each has the exact text, the cause, how to confirm it, the fix, how to prevent it, and a scenario to practise on in the <a href="index.html#playground">playground</a>.</p>
     <nav class="toc card" aria-label="Problems">
       <h2>The workflow does not start</h2>
       <ul>
@@ -34,6 +34,11 @@
         <li><a href="#named-value">Unrecognized named-value: 'secrets'</a></li>
         <li><a href="#unable-to-resolve">Unable to resolve action</a></li>
         <li><a href="#billing">Recent account payments have failed</a></li>
+      </ul>
+      <h2>Merging and required checks</h2>
+      <ul>
+        <li><a href="#check-expected">Expected — Waiting for status to be reported</a></li>
+        <li><a href="#merge-queue">The merge queue never gets its checks</a></li>
       </ul>
       <h2>A step or job fails</h2>
       <ul>
@@ -46,6 +51,8 @@
         <li><a href="#git-describe">fatal: No names found, cannot describe anything</a></li>
         <li><a href="#service-unreachable">Service container unreachable</a></li>
         <li><a href="#python-version">The version '3.1' was not found</a></li>
+        <li><a href="#windows-shell">A step fails only on Windows</a></li>
+        <li><a href="#lfs-pointer">Files contain version https://git-lfs.github.com/spec/v1</a></li>
       </ul>
       <h2>Secrets and permissions</h2>
       <ul>
@@ -56,6 +63,7 @@
         <li><a href="#git-push-403">Permission to repo.git denied to github-actions[bot]</a></li>
         <li><a href="#token-no-trigger">A push by the workflow starts no other workflow</a></li>
         <li><a href="#rate-limit">API rate limit exceeded for installation</a></li>
+        <li><a href="#skip-output">Skip output since it may contain secret</a></li>
       </ul>
       <h2>Caching and artifacts</h2>
       <ul>
@@ -459,12 +467,12 @@ fatal: unable to access 'https://github.com/devquest/shop/': The requested URL r
       <p>Call the next workflow directly (workflow_call or gh workflow run), or push with a GitHub App token.</p>
       <h3>Prevent</h3>
       <p>Design release pipelines as one workflow, or chain with workflow_run.</p>
-      <p class="note">Practise it: <a href="index.html#play/tag-release">Pushing a tag does not release</a>. Learn it: <a href="index.html#path">Level 07 · Least privilege</a>. <a href="index.html#fix/token-no-trigger">Open in the app</a>.</p>
+      <p class="note">Practise it: <a href="index.html#play/token-no-trigger">A tag pushed by the workflow starts nothing</a>, <a href="index.html#play/tag-release">Pushing a tag does not release</a>. Learn it: <a href="index.html#path">Level 07 · Least privilege</a>. <a href="index.html#fix/token-no-trigger">Open in the app</a>.</p>
     </section>
     <section class="card answer" id="rate-limit">
       <h2>API rate limit exceeded for installation</h2>
       <h3>Error</h3>
-      <pre class="err"><code>API rate limit exceeded for installation ID 12345678.</code></pre>
+      <pre class="err"><code>HTTP 403: API rate limit exceeded for installation ID 41806354.</code></pre>
       <h3>Symptom</h3>
       <p>Steps calling the GitHub API fail after many calls.</p>
       <h3>Cause</h3>
@@ -472,10 +480,95 @@ fatal: unable to access 'https://github.com/devquest/shop/': The requested URL r
       <h3>Confirm</h3>
       <pre><code>gh api rate_limit</code></pre>
       <h3>Fix</h3>
-      <p>Batch calls, cache results, or use a GitHub App token.</p>
+      <p>Use list endpoints with <code>per_page=100</code> and <code>--paginate</code>, or GraphQL (<code>gh pr list --json</code>), cache results, or use a GitHub App token with a higher limit.</p>
       <h3>Prevent</h3>
-      <p>Avoid polling loops against the API.</p>
-      <p class="note">Learn it: <a href="index.html#path">Level 07 · Least privilege</a>. <a href="index.html#fix/rate-limit">Open in the app</a>.</p>
+      <p>Never call the API once per item in a loop.</p>
+      <p class="note">Practise it: <a href="index.html#play/rate-limit">API rate limit exceeded for installation</a>. Learn it: <a href="index.html#path">Level 07 · Least privilege</a>. <a href="index.html#fix/rate-limit">Open in the app</a>.</p>
+    </section>
+    <section class="card answer" id="check-expected">
+      <h2>Expected — Waiting for status to be reported</h2>
+      <h3>Error</h3>
+      <pre class="err"><code>test  Expected — Waiting for status to be reported</code></pre>
+      <h3>Symptom</h3>
+      <p>A pull request cannot merge: a required check shows Expected and never starts.</p>
+      <h3>Cause</h3>
+      <p>No workflow reported a check with that name: a paths or branches filter skipped the whole workflow, the job was renamed, or the check comes from a workflow that does not run on this event.</p>
+      <h3>Confirm</h3>
+      <pre><code>gh pr checks &lt;number&gt;
+gh api repos/&lt;owner&gt;/&lt;repo&gt;/branches/main/protection/required_status_checks --jq '.contexts'</code></pre>
+      <h3>Fix</h3>
+      <p>Let the workflow run for every pull request and skip work inside the job (a job skipped by <code>if:</code> reports success), or make the check name match the job name.</p>
+      <h3>Prevent</h3>
+      <p>Do not use paths filters on workflows that provide required checks; keep job names stable.</p>
+      <p class="note">Practise it: <a href="index.html#play/required-check">Required check stuck at Expected</a>, <a href="index.html#play/merge-queue">Merge queue waits for a check that never runs</a>. Learn it: <a href="index.html#path">Level 02 · When workflows run</a>. <a href="index.html#fix/check-expected">Open in the app</a>.</p>
+    </section>
+    <section class="card answer" id="merge-queue">
+      <h2>The merge queue never gets its checks</h2>
+      <h3>Error</h3>
+      <pre class="err"><code>test  Expected — Waiting for status to be reported   (on gh-readonly-queue/main/pr-42-...)</code></pre>
+      <h3>Symptom</h3>
+      <p>Pull requests enter the merge queue, wait, and are removed without merging.</p>
+      <h3>Cause</h3>
+      <p>The merge queue sends a <code>merge_group</code> event for its temporary branch. Workflows that only listen to pull_request and push never report there.</p>
+      <h3>Confirm</h3>
+      <pre><code>grep -n -A3 '^on:' .github/workflows/*.yml   # merge_group?</code></pre>
+      <h3>Fix</h3>
+      <p>Add <code>merge_group:</code> to the <code>on:</code> of every workflow that provides a required check.</p>
+      <h3>Prevent</h3>
+      <p>Add merge_group before turning the queue on.</p>
+      <p class="note">Practise it: <a href="index.html#play/merge-queue">Merge queue waits for a check that never runs</a>. Learn it: <a href="index.html#path">Level 02 · When workflows run</a>. <a href="index.html#fix/merge-queue">Open in the app</a>.</p>
+    </section>
+    <section class="card answer" id="windows-shell">
+      <h2>A step fails only on Windows</h2>
+      <h3>Error</h3>
+      <pre class="err"><code>Remove-Item: A parameter cannot be found that matches parameter name 'rf'.
+Error: Process completed with exit code 1.</code></pre>
+      <h3>Symptom</h3>
+      <p>The same script passes on Linux and macOS and fails on windows-latest.</p>
+      <h3>Cause</h3>
+      <p>Windows runners run <code>run:</code> steps with pwsh by default. Unix commands are aliases for cmdlets with other options, or do not exist. With <code>shell: cmd</code>, errors can pass silently.</p>
+      <h3>Confirm</h3>
+      <pre><code># the step log shows: shell: C:\Program Files\PowerShell\7\pwsh.EXE -command &quot;. '{0}'&quot;</code></pre>
+      <h3>Fix</h3>
+      <p>Set <code>shell: bash</code> on the step or in <code>defaults: run: shell:</code>; Git Bash is on Windows runners. Or write the step in PowerShell.</p>
+      <h3>Prevent</h3>
+      <p>Use one default shell per workflow; test the matrix on pull requests.</p>
+      <p class="note">Practise it: <a href="index.html#play/windows-shell">The same step fails only on Windows</a>. Learn it: <a href="index.html#path">Level 05 · Fast and reliable builds</a>. <a href="index.html#fix/windows-shell">Open in the app</a>.</p>
+    </section>
+    <section class="card answer" id="lfs-pointer">
+      <h2>Files contain version https://git-lfs.github.com/spec/v1</h2>
+      <h3>Error</h3>
+      <pre class="err"><code>version https://git-lfs.github.com/spec/v1
+oid sha256:4d7a2146...
+size 18432</code></pre>
+      <h3>Symptom</h3>
+      <p>Tests or builds read a tiny text file instead of the real data.</p>
+      <h3>Cause</h3>
+      <p>The files are stored with Git LFS, and actions/checkout does not fetch LFS objects by default.</p>
+      <h3>Confirm</h3>
+      <pre><code>head -1 data/prices.csv   # in a step
+git lfs ls-files</code></pre>
+      <h3>Fix</h3>
+      <p>Set <code>lfs: true</code> on actions/checkout.</p>
+      <h3>Prevent</h3>
+      <p>Cache .git/lfs, and keep large data out of jobs that do not need it.</p>
+      <p class="note">Practise it: <a href="index.html#play/lfs">Tests read a Git LFS pointer, not the file</a>. Learn it: <a href="index.html#path">Level 02 · When workflows run</a>. <a href="index.html#fix/lfs-pointer">Open in the app</a>.</p>
+    </section>
+    <section class="card answer" id="skip-output">
+      <h2>Skip output since it may contain secret</h2>
+      <h3>Error</h3>
+      <pre class="err"><code>Skip output 'image' since it may contain secret.</code></pre>
+      <h3>Symptom</h3>
+      <p>A job output is empty in the next job, with a warning on the job that set it.</p>
+      <h3>Cause</h3>
+      <p>The output's value contains a secret's value, so the runner drops it.</p>
+      <h3>Confirm</h3>
+      <pre><code>gh run view &lt;run-id&gt;   # ANNOTATIONS</code></pre>
+      <h3>Fix</h3>
+      <p>Pass only the non-secret part and add the secret in the job that uses it, or keep non-sensitive settings (hosts, regions) in <code>vars</code> instead of secrets.</p>
+      <h3>Prevent</h3>
+      <p>Store only real credentials as secrets.</p>
+      <p class="note">Practise it: <a href="index.html#play/secret-output">Skip output since it may contain secret</a>. Learn it: <a href="index.html#path">Level 04 · Jobs that work together</a>. <a href="index.html#fix/skip-output">Open in the app</a>.</p>
     </section>
     <section class="card answer" id="cache-miss">
       <h2>Cache not found for input keys</h2>

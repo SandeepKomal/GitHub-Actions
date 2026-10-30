@@ -80,7 +80,7 @@ assert.ok(E.filterMatch(["v*"], "v1.4.0"));
   assert.match(v("on: pushh\njobs:\n  a:\n    runs-on: x\n    steps:\n      - run: echo\n")[0], /Unexpected value 'pushh'/);
   assert.match(v("jobs:\n  a:\n    runs-on: x\n    steps:\n      - run: echo\n")[0], /No event triggers defined in `on`/);
   assert.match(v("on: push\njobs:\n  a:\n    needs: b\n    runs-on: x\n    steps: [{run: echo}]\n  b:\n    needs: a\n    runs-on: x\n    steps: [{run: echo}]\n")[0], /creates a cycle in the dependency graph/);
-  assert.match(v("on: push\njobs:\n  a:\n    runs-on: x\n    steps:\n      - name: nothing\n")[0], /Every step must define a `uses` or `run` key/);
+  assert.match(v("on: push\njobs:\n  a:\n    runs-on: x\n    steps:\n      - name: nothing\n")[0], /There.s not enough info to determine what you meant\. Add one of these properties: run, uses/);
 }
 
 // --- the shell -----------------------------------------------------------------------
@@ -107,7 +107,7 @@ for (const s of SCENARIOS) {
   assert.ok(!s.won(verify(s, s.files)), `${s.id}: must start broken`);
   for (const e of s.events) assert.ok(E.EVENT_TYPES[e], `${s.id}: unknown event ${e}`);
 }
-assert.ok(SCENARIOS.length >= 40, "at least 40 scenarios");
+assert.ok(SCENARIOS.length >= 55, "at least 55 scenarios");
 assert.deepStrictEqual(GROUPS.map(([g]) => g), ["Basics", "Triggers and conditions", "Jobs and matrices", "Secrets and permissions", "Caching and artifacts", "Deployments and environments", "Reuse", "Security"]);
 
 // --- Basics ----------------------------------------------------------------------------
@@ -413,6 +413,69 @@ scenario("stale-runs", [["jobs:\n", "concurrency:\n  group: ${{ github.workflow 
   [["jobs:\n", "concurrency:\n  group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}\njobs:\n"]],
   [["jobs:\n", "concurrency:\n  group: ${{ github.run_id }}\n  cancel-in-progress: true\njobs:\n"]]
 ]);
+
+// --- Added coverage: LFS, required checks, merge queue, token events, Windows, outputs, rate limits ---
+assert.match(log(runOf("lfs")), /^version https:\/\/git-lfs\.github\.com\/spec\/v1$/m);
+scenario("lfs", [["      - uses: actions/checkout@v6\n", "      - uses: actions/checkout@v6\n        with:\n          lfs: true\n"]], [
+  [["      - uses: actions/checkout@v6\n", "      - uses: actions/checkout@v6\n        with:\n          fetch-depth: 0\n"]],
+  [["          grep -q \"^sku,price\" data/prices.csv\n", "          grep -q \"^sku,price\" data/prices.csv || true\n"]]
+]);
+assert.deepStrictEqual(runOf("required-check").required, [{ name: "test", state: "expected" }]);
+scenario("required-check", [["    paths:\n      - \"src/**\"\n      - package-lock.json\n", ""]], [
+  [["    paths:\n", "    paths-ignore:\n"], ["      - \"src/**\"\n", "      - \"docs/**\"\n"]],
+  [["  test:\n", "  tests:\n"]]
+]);
+scenario("merge-queue", [["  pull_request:\n", "  pull_request:\n  merge_group:\n"]], [
+  [["    branches: [main]\n", "    branches: [main, \"gh-readonly-queue/**\"]\n"]].slice(0, 0).concat([["  pull_request:\n", "  pull_request:\n    types: [opened, synchronize, reopened, enqueued]\n"]]),
+  [["  pull_request:\n", "  pull_request_target:\n"]]
+]);
+{
+  const r = verify(S("token-no-trigger"), S("token-no-trigger").files).runs[0];
+  assert.strictEqual(r.length, 1, "a tag pushed with the GITHUB_TOKEN starts no other workflow");
+  assert.deepStrictEqual(r[0].effects.pushedTags.map((t) => t.by), ["github"]);
+}
+const REL = ".github/workflows/release.yml", DEP = ".github/workflows/deploy.yml";
+scenario("token-no-trigger", [["      - uses: actions/checkout@v6\n", "      - uses: actions/checkout@v6\n        with:\n          token: ${{ secrets.RELEASE_APP_TOKEN }}\n", REL]], [
+  [["permissions:\n  contents: write\n", "permissions: write-all\n", REL]],
+  [["    tags: ['v*']\n", "    tags: ['**']\n", DEP]],
+  [["    tags: ['v*']\n", "    tags: ['v*']\n    branches: [main]\n", DEP]],
+  [["      - uses: actions/checkout@v6\n", "      - uses: actions/checkout@v6\n        with:\n          token: ${{ secrets.RELEASE_TOKEN }}\n", REL]]
+]);
+assert.ok(solved("token-no-trigger", [
+  ["permissions:\n  contents: write\n", "permissions:\n  contents: write\n  actions: write\n", REL],
+  ["          git push origin \"v1.4.${{ github.run_number }}\"\n", "          git push origin \"v1.4.${{ github.run_number }}\"\n          gh workflow run deploy.yml --ref \"v1.4.${{ github.run_number }}\"\n        env:\n          GH_TOKEN: ${{ github.token }}\n", REL],
+  ["  push:\n    tags: ['v*']\n", "  push:\n    tags: ['v*']\n  workflow_dispatch:\n", DEP]
+]), "dispatching the deploy at the tag also works");
+assert.match(log(verify(S("token-no-trigger"), filesOf("token-no-trigger", [["          git push origin \"v1.4.${{ github.run_number }}\"\n", "          git push origin \"v1.4.${{ github.run_number }}\"\n          gh workflow run deploy.yml --ref v1\n        env:\n          GH_TOKEN: ${{ github.token }}\n", REL]])).run(0)),
+  /HTTP 403: Resource not accessible by integration \(https:\/\/api\.github\.com\/repos\/devquest\/shop\/actions\/workflows\/deploy\.yml\/dispatches\)/);
+assert.match(log(runOf("windows-shell")), /Remove-Item: A parameter cannot be found that matches parameter name 'rf'\./);
+assert.match(log(runOf("windows-shell")), /shell: C:\\Program Files\\PowerShell\\7\\pwsh\.EXE -command "\. '\{0\}'"/);
+scenario("windows-shell", [["      - name: Clean and build\n", "      - name: Clean and build\n        shell: bash\n"]], [
+  [["os: [ubuntu-latest, windows-latest]", "os: [ubuntu-latest]"]],
+  [["      - name: Clean and build\n", "      - name: Clean and build\n        shell: cmd\n"]],
+  [["      - name: Clean and build\n", "      - name: Clean and build\n        continue-on-error: true\n"]]
+]);
+assert.match(log(runOf("windows-shell", [["      - name: Clean and build\n", "      - name: Clean and build\n        shell: cmd\n"]])), /'rm' is not recognized as an internal or external command,\noperable program or batch file\./);
+assert.ok(solved("windows-shell", [["    runs-on: ${{ matrix.os }}\n", "    runs-on: ${{ matrix.os }}\n    defaults:\n      run:\n        shell: bash\n"]]), "a job-level default shell works too");
+assert.match(log(runOf("secret-output")), /deploy: IMAGE is empty; nothing to deploy/);
+scenario("secret-output", [
+  ['run: echo "image=${{ secrets.REGISTRY }}/shop:1.4.${{ github.run_number }}" >> "$GITHUB_OUTPUT"', 'run: echo "tag=1.4.${{ github.run_number }}" >> "$GITHUB_OUTPUT"'],
+  ["      image: ${{ steps.meta.outputs.image }}", "      tag: ${{ steps.meta.outputs.tag }}"],
+  ["IMAGE: ${{ needs.build.outputs.image }}", "IMAGE: ${{ secrets.REGISTRY }}/shop:${{ needs.build.outputs.tag }}"]
+], [
+  [["      image: ${{ steps.meta.outputs.image }}", "      image-name: ${{ steps.meta.outputs.image }}"], ["needs.build.outputs.image", "needs.build.outputs.image-name"]],
+  [['>> "$GITHUB_OUTPUT"', '>> "$GITHUB_ENV"']],
+  [['run: echo "image=${{ secrets.REGISTRY }}/shop', 'run: echo "image=$(echo ${{ secrets.REGISTRY }} | base64)/shop']]
+]);
+assert.match(log(runOf("rate-limit")), /HTTP 403: API rate limit exceeded for installation ID 41806354\./);
+const paged = ["          for n in $(seq 1 1500); do\n            gh api \"repos/devquest/shop/pulls/$n\" --jq .title >> titles.txt\n          done\n",
+  "          gh api \"repos/devquest/shop/pulls?state=all&per_page=100\" --paginate --jq '.[].title' > titles.txt\n"];
+scenario("rate-limit", [paged], [
+  [["--jq .title >> titles.txt\n", "--jq .title >> titles.txt\n            sleep 1\n"]],
+  [["  pull-requests: read\n", "  pull-requests: write\n"]],
+  [["seq 1 1500", "seq 1 1000"]]
+]);
+assert.ok(solved("rate-limit", [[paged[0], "          gh pr list --state all --limit 1500 --json title --jq '.[].title' > titles.txt\n"]]), "gh pr list (GraphQL) also works");
 
 for (const s of SCENARIOS) assert.ok(tested.has(s.id), `${s.id}: needs a fix and wrong moves in this test`);
 console.log(`playground ok: ${SCENARIOS.length} scenarios, each with a fix and wrong moves`);

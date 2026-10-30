@@ -158,11 +158,11 @@
         r.detail ? h("p.note", null, "Why: ", r.detail) : null,
         r.errorLine ? h("button.linkish", { type: "button", onclick: () => jumpTo(r.errorLine) }, `Go to line ${r.errorLine}`) : null);
     }
-    if (r.status === "not-triggered") return h("div.run.card", null, head("skipped", "No run started", ev), h("p", null, r.reason));
+    if (r.status === "not-triggered") return h("div.run.card", null, head("skipped", "No run started", ev), h("p", null, r.reason), mergeBox(r));
     const state = r.status === "waiting" ? "waiting" : r.conclusion;
     const card = h("div.run.card", null,
       head(state, r.title || r.name, `${ev} · #${r.number} · ${r.status === "waiting" ? "waiting" : E.fmtSecs(r.duration)}`),
-      facts(r), graph(r, animate));
+      facts(r), graph(r, animate), mergeBox(r));
     if (r.waiting.length) {
       card.append(h("div.run-wait", null, h("p", null, h("strong", null, "Review required. "), `This run is waiting for approval to deploy to ${r.waiting.join(", ")}.`),
         h("button.pill.primary.small-pill", { type: "button", onclick: () => send(session.lastEvent.id, session.lastEvent.inputs, true) }, "Approve and deploy")));
@@ -171,6 +171,16 @@
     const job = r.jobs.find((j) => j.key === selected) || r.jobs.find((j) => j.conclusion === "failure") || r.jobs[0];
     if (job && i === shown.length - 1) card.append(stepsOf(r, job));
     return card;
+  }
+
+  // Required checks, as the pull request's merge box shows them.
+  function mergeBox(r) {
+    if (!r.required) return null;
+    const label = { expected: "Expected — Waiting for status to be reported", pending: "In progress", success: "Successful", failure: "Failing" };
+    const blocked = r.required.some((c) => c.state !== "success");
+    return h("div.merge-box" + (blocked ? ".blocked" : ""), null,
+      h("p", null, h("strong", null, blocked ? "Merging is blocked." : "All required checks have passed."), " Required checks:"),
+      h("ul", null, r.required.map((c) => h("li." + c.state, null, h("code", null, c.name), " ", label[c.state]))));
   }
 
   // Token, secrets, caches and artifacts, as the run used them.

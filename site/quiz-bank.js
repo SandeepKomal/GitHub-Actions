@@ -32,7 +32,9 @@ window.QUEST_QUIZ_BANK = {
     { q: "Why might a scheduled workflow in a public repository stop running by itself?", options: ["Schedules expire after a year", "GitHub disables schedules after 60 days with no repository activity", "Schedules only run on weekdays", "Free plans have no schedules"], answer: 1,
       why: "In public repositories, scheduled workflows are disabled after 60 days without activity. Re-enable them from the Actions tab." },
     { q: "`on: pull_request` with `branches: [main]` filters on which branch?", options: ["The pull request's head branch", "The base branch the pull request targets", "Both", "Neither: branches does not apply to pull requests"], answer: 1,
-      why: "For pull_request events, `branches` matches the base branch: here, pull requests into main." }
+      why: "For pull_request events, `branches` matches the base branch: here, pull requests into main." },
+    { q: "The merge queue removes approved pull requests without merging. CI runs on pull_request and push. What is missing?", options: ["A schedule", "The `merge_group` trigger", "`workflow_dispatch`", "A paths filter"], answer: 1,
+      why: "The queue tests a temporary branch and sends merge_group. Workflows that provide required checks must listen for it." }
   ],
   "03": [
     { q: "In an `if:`, how does `github.ref == 'main'` behave on a push to main?", options: ["True", "False: github.ref is `refs/heads/main`", "An error", "True only for tags"], answer: 1,
@@ -80,7 +82,9 @@ window.QUEST_QUIZ_BANK = {
     { q: "A job ran for 6 hours and was killed. What should every job have?", options: ["A matrix", "timeout-minutes near its real duration", "continue-on-error", "A cache"], answer: 1,
       why: "The default timeout is 360 minutes. A hang then burns minutes all night; set a tight timeout." },
     { q: "Which runner label is spelt correctly?", options: ["ubuntu-lastest", "ubuntu-latest", "linux-latest", "ubuntu"], answer: 1,
-      why: "A label no runner has makes the job wait for a runner until GitHub cancels it after 24 hours." }
+      why: "A label no runner has makes the job wait for a runner until GitHub cancels it after 24 hours." },
+    { q: "`rm -rf dist` fails only on windows-latest. Why?", options: ["Windows has no dist folder", "The default shell there is pwsh, where rm is Remove-Item without -rf", "Windows runners are read-only", "rm needs sudo on Windows"], answer: 1,
+      why: "Set `shell: bash` (Git Bash is installed) or write the step for PowerShell." }
   ],
   "06": [
     { q: "A fork pull request reads `secrets.COVERAGE_TOKEN`. What value does it get?", options: ["The secret", "An empty string", "An error", "A read-only copy"], answer: 1,
@@ -108,7 +112,9 @@ window.QUEST_QUIZ_BANK = {
     { q: "A fork pull request asks for `pull-requests: write`. What does it get?", options: ["write", "read", "none", "An error"], answer: 1,
       why: "For fork pull requests, write permissions are downgraded to read. Comment from a separate trusted workflow if needed." },
     { q: "Which permission does OIDC to a cloud need?", options: ["contents: write", "id-token: write", "secrets: read", "actions: write"], answer: 1,
-      why: "id-token: write lets the job request an OIDC token from GitHub to exchange for cloud credentials." }
+      why: "id-token: write lets the job request an OIDC token from GitHub to exchange for cloud credentials." },
+    { q: "A workflow pushes tag v1.4.0 with the GITHUB_TOKEN. The workflow `on: push: tags: ['v*']` does not run. Why?", options: ["Tags need a release", "Events caused by the GITHUB_TOKEN do not start new workflow runs", "The tag filter is wrong", "contents: write is missing"], answer: 1,
+      why: "This prevents loops. Use a GitHub App token, call the workflow directly, or dispatch it (workflow_dispatch is allowed)." }
   ],
   "08": [
     { q: "Two deploys run at once and the older finishes last. What prevents it?", options: ["A matrix", "A concurrency group for the deploy", "fail-fast", "timeout-minutes"], answer: 1,

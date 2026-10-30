@@ -11,7 +11,7 @@ A practical GitHub Actions learning repository covering CI, testing, security sc
 
 **[sandeepkomal.github.io/GitHub-Actions](https://sandeepkomal.github.io/GitHub-Actions/)** teaches GitHub Actions by fixing broken pipelines, in the browser, with no account:
 
-- **Playground**: a workflow simulator. Edit the YAML, send an event (push, pull request, a fork, workflow_dispatch with inputs, a schedule, a tag) and read the run job by job: needs, matrices, `if:`, step logs, exit codes, cache hits, artifacts, environments with reviewers, concurrency, token permissions and secrets on forks. 49 scenarios from a missing `runs-on` to pwn requests and OIDC trust policies, each with three hints and real error messages.
+- **Playground**: a workflow simulator. Edit the YAML, send an event (push, pull request, a fork, workflow_dispatch with inputs, a schedule, a tag) and read the run job by job: needs, matrices, `if:`, step logs, exit codes, cache hits, artifacts, environments with reviewers, concurrency, token permissions and secrets on forks. 56 scenarios from a missing `runs-on` to pwn requests and OIDC trust policies, each with three hints and real error messages.
 - **Path**: 12 levels, each with a lab in your own fork that uses this repository's workflows.
 - **Workflow X-ray**: paste a workflow; every key is explained and risky patterns are flagged.
 - **Troubleshoot**: the error messages Actions prints, each with cause, how to confirm, fix and prevention. Also as a [plain page](https://sandeepkomal.github.io/GitHub-Actions/problems.html).

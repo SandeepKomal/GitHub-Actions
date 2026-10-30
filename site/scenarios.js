@@ -330,6 +330,36 @@
       lesson: "Actions declare the Node.js they run on. Read the release notes, move to the major that runs on Node.js 24, and let Dependabot keep them current."
     },
 
+    {
+      id: "lfs", group: "Basics", level: "02", title: "Tests read a Git LFS pointer, not the file",
+      story: "The price list moved to Git LFS. Locally everything passes; in CI the price test reads a three-line file starting with version https://git-lfs.github.com/spec/v1.",
+      goal: "Check out the real price list and pass the price check.",
+      files: { [CI]: y`
+        name: CI
+        on: push
+        jobs:
+          test:
+            runs-on: ubuntu-latest
+            steps:
+              - uses: ${checkout}
+              - name: Price list is real data
+                run: |
+                  head -1 data/prices.csv
+                  grep -q "^sku,price" data/prices.csv
+              - run: npm ci
+              - run: npm test
+      ` },
+      world: { repo: { files: { "data/prices.csv": "version https://git-lfs.github.com/spec/v1\noid sha256:4d7a214614ab2935c943f9e0ff69d22eadbb8f32b1258daaa5e2ca24d17e2393\nsize 18432\n" } },
+        lfs: { "data/prices.csv": "sku,price\nA-100,12.50\nA-101,8.00\n" } },
+      events: ["push"], verify: ["push"],
+      checks: [["The price check reads real data", (v) => /^sku,price$/m.test(text(v.run(0)))], ["The run passes", (v) => ok(v.run(0))]],
+      hints: [
+        "Read what `head -1` printed. Is that a CSV header?",
+        "actions/checkout does not download Git LFS objects unless you ask; you get the small pointer files instead.",
+        "Add `with:` and `lfs: true` to the checkout step."
+      ],
+      lesson: "LFS files are pointers until fetched. Set lfs: true on checkout, and cache .git/lfs if the files are large."
+    },
     // --- Triggers and conditions -----------------------------------------------------
     {
       id: "branch-filter", group: "Triggers and conditions", level: "02", title: "The workflow never runs",
@@ -532,6 +562,119 @@
       lesson: "With a branches filter and no tags filter, tag pushes do not start the workflow. List both when you need both."
     },
 
+    {
+      id: "required-check", group: "Triggers and conditions", level: "02", title: "Required check stuck at Expected",
+      story: "A docs-only pull request cannot be merged. The merge box says the required check test is Expected, waiting for status to be reported, and it never changes.",
+      goal: "Docs-only pull requests can merge, and code changes still run the tests.",
+      files: { [CI]: y`
+        name: CI
+        on:
+          pull_request:
+            paths:
+              - "src/**"
+              - package-lock.json
+        jobs:
+          test:
+            runs-on: ubuntu-latest
+            steps:
+              - uses: ${checkout}
+              - run: npm ci
+              - run: npm test
+      ` },
+      world: { requiredChecks: ["test"] },
+      events: ["pr-docs", "pr"], verify: ["pr-docs", "pr"],
+      checks: [
+        ["A docs-only pull request reports the test check", (v) => (v.run(0).required || []).every((c) => c.state === "success")],
+        ["A code pull request runs the tests", (v) => stepRan(v.run(1), /npm test/) && (v.run(1).required || []).every((c) => c.state === "success")]
+      ],
+      hints: [
+        "Send the docs-only pull request. Did the workflow start at all?",
+        "A workflow skipped by a paths filter reports nothing, so a required check waits forever. A job skipped by `if:` reports success.",
+        "Remove the `paths:` filter. To still save minutes, skip the expensive steps inside the job instead of skipping the workflow."
+      ],
+      lesson: "Never put paths filters on workflows that provide required checks. Skip work inside the job, where a skipped job still reports."
+    },
+    {
+      id: "merge-queue", group: "Triggers and conditions", level: "02", title: "Merge queue waits for a check that never runs",
+      story: "The repository turned on the merge queue. Approved pull requests enter the queue, wait, and are removed without merging.",
+      goal: "The merge queue gets the required test check, and pull requests still run it.",
+      files: { [CI]: y`
+        name: CI
+        on:
+          pull_request:
+          push:
+            branches: [main]
+        jobs:
+          test:
+            runs-on: ubuntu-latest
+            steps:
+              - uses: ${checkout}
+              - run: npm ci
+              - run: npm test
+      ` },
+      world: { requiredChecks: ["test"] },
+      events: ["merge-queue", "pr"], verify: ["merge-queue", "pr"],
+      checks: [
+        ["The merge queue gets the test check", (v) => (v.run(0).required || []).every((c) => c.state === "success")],
+        ["Pull requests still run the tests", (v) => ok(v.run(1))]
+      ],
+      hints: [
+        "Send the merge queue event. Which event does the queue send?",
+        "The merge queue creates a temporary branch and sends a `merge_group` event. Workflows must listen for it to report checks there.",
+        "Add `merge_group:` under `on:`."
+      ],
+      lesson: "With a merge queue, every workflow that provides a required check needs the merge_group trigger."
+    },
+    {
+      id: "token-no-trigger", group: "Triggers and conditions", level: "07", title: "A tag pushed by the workflow starts nothing",
+      story: "Release tags itself after each merge to main. The deploy workflow listens for v* tags, yet it has never run for one of those tags.",
+      goal: "A merge to main ends with production deployed by the tag's own workflow run.",
+      files: {
+        ".github/workflows/release.yml": y`
+          name: Release
+          on:
+            push:
+              branches: [main]
+          permissions:
+            contents: write
+          jobs:
+            tag:
+              runs-on: ubuntu-latest
+              steps:
+                - uses: ${checkout}
+                - name: Tag the release
+                  run: |
+                    git tag "v1.4.\${{ github.run_number }}"
+                    git push origin "v1.4.\${{ github.run_number }}"
+        `,
+        ".github/workflows/deploy.yml": y`
+          name: Deploy release
+          on:
+            push:
+              tags: ['v*']
+          jobs:
+            deploy:
+              runs-on: ubuntu-latest
+              steps:
+                - uses: ${checkout}
+                - run: ./deploy.sh production
+                  env:
+                    DEPLOY_TOKEN: \${{ secrets.DEPLOY_TOKEN }}
+        `
+      },
+      world: { workflow: ".github/workflows/release.yml", secrets: { ...deployToken, RELEASE_APP_TOKEN: "app-token-5f1c9a" } },
+      events: ["push"], verify: ["push"],
+      checks: [
+        ["The tag is pushed", (v) => v.runs[0][0].effects.pushedTags.length > 0],
+        ["Production is deployed from a v* tag run", (v) => v.runs[0].some((r) => /^refs\/tags\/v/.test(r.event.ref) && r.effects.deployed.some((d) => d.env === "production"))]
+      ],
+      hints: [
+        "The tag reaches GitHub; check the Actions tab for a deploy run. Which token pushed it?",
+        "Events caused by the GITHUB_TOKEN do not start new workflow runs, so workflows cannot trigger each other in loops. A GitHub App token or a PAT does; so does workflow_dispatch.",
+        "Check out with the release app's token: add `with:` and `token: ${{ secrets.RELEASE_APP_TOKEN }}` to the checkout step in release.yml."
+      ],
+      lesson: "Pushes, tags and releases made with the GITHUB_TOKEN start no workflows. Use an App token, call the next workflow directly, or dispatch it."
+    },
     // --- Jobs and matrices ------------------------------------------------------------
     {
       id: "needs-order", group: "Jobs and matrices", level: "03", title: "Deploy does not wait for the tests",
@@ -832,6 +975,40 @@
       lesson: "Service containers are reached by name from a job container, and through mapped ports on localhost from the runner."
     },
 
+    {
+      id: "windows-shell", group: "Jobs and matrices", level: "05", title: "The same step fails only on Windows",
+      story: "Windows was added to the build matrix. Linux passes; Windows fails in the very first command.",
+      goal: "Build on Ubuntu and Windows with the same steps.",
+      files: { [CI]: y`
+        name: CI
+        on: push
+        jobs:
+          build:
+            runs-on: \${{ matrix.os }}
+            strategy:
+              matrix:
+                os: [ubuntu-latest, windows-latest]
+            steps:
+              - uses: ${checkout}
+              - run: npm ci
+              - name: Clean and build
+                run: |
+                  rm -rf dist
+                  npm run build
+      ` },
+      events: ["push"], verify: ["push"],
+      checks: [
+        ["Ubuntu builds", (v) => v.run(0).jobs.some((j) => j.os === "Linux" && j.conclusion === "success")],
+        ["Windows builds", (v) => v.run(0).jobs.some((j) => j.os === "Windows" && j.conclusion === "success")],
+        ["Every command works on Windows, none silently fails", (v) => !/is not recognized|cannot be found that matches/.test(text(v.run(0)))]
+      ],
+      hints: [
+        "Open the Windows job: which shell ran the step?",
+        "On Windows the default shell is pwsh. There `rm` is Remove-Item, which has no -rf option. Git Bash is installed on Windows runners.",
+        "Add `shell: bash` to the step, or `defaults:` / `run:` / `shell: bash` for the whole job."
+      ],
+      lesson: "Windows runners default to pwsh. Set shell: bash for portable scripts, or write them for each shell."
+    },
     // --- Secrets and permissions ---------------------------------------------------------
     {
       id: "dependabot-secret", group: "Secrets and permissions", level: "06", title: "Secrets are empty on Dependabot pull requests",
@@ -1031,6 +1208,82 @@
       lesson: "Declare permissions in every workflow, starting from contents: read. A stolen read-only token can do little."
     },
 
+    {
+      id: "secret-output", group: "Secrets and permissions", level: "04", title: "Skip output since it may contain secret",
+      story: "The registry's host name is stored as a secret. Since then, deploy gets an empty image name and the build job shows a warning about skipping an output.",
+      goal: "Deploy the image the build job named, without printing or leaking the secret.",
+      files: { [CI]: y`
+        name: CI
+        on: push
+        jobs:
+          build:
+            runs-on: ubuntu-latest
+            outputs:
+              image: \${{ steps.meta.outputs.image }}
+            steps:
+              - id: meta
+                run: echo "image=\${{ secrets.REGISTRY }}/shop:1.4.\${{ github.run_number }}" >> "$GITHUB_OUTPUT"
+          deploy:
+            needs: build
+            runs-on: ubuntu-latest
+            steps:
+              - uses: ${checkout}
+              - run: ./deploy.sh production
+                env:
+                  IMAGE: \${{ needs.build.outputs.image }}
+                  DEPLOY_TOKEN: \${{ secrets.DEPLOY_TOKEN }}
+      ` },
+      world: { secrets: { ...deployToken, REGISTRY: "registry.devquest.example" }, app: { needsImage: true } },
+      events: ["push"], verify: ["push"],
+      checks: [
+        ["Production is deployed with an image", (v) => deployedTo(v.run(0), "production")],
+        ["No output is skipped", (v) => !v.run(0).annotations.some((a) => /Skip output/.test(a[1]))],
+        ["No secret leaks", (v) => !v.run(0).effects.leaks.length]
+      ],
+      hints: [
+        "Read the warning on the build job. Why would GitHub drop an output?",
+        "Job outputs that contain a secret's value are not passed on. Pass only the non-secret part, and add the secret where it is used.",
+        "Output just the tag (`tag=1.4.${{ github.run_number }}`), and in deploy set `IMAGE: ${{ secrets.REGISTRY }}/shop:${{ needs.build.outputs.tag }}`. Or keep the host in a variable: `vars.REGISTRY`."
+      ],
+      lesson: "Outputs containing secrets are dropped with a warning. Keep non-sensitive settings in variables, and pass secrets only where they are used."
+    },
+    {
+      id: "rate-limit", group: "Secrets and permissions", level: "07", title: "API rate limit exceeded for installation",
+      story: "The weekly pull request report collected titles one request at a time. With 1,500 pull requests it now fails two thirds of the way through.",
+      goal: "Report all 1,500 pull requests with the GITHUB_TOKEN.",
+      files: { [CI]: y`
+        name: PR report
+        on:
+          workflow_dispatch:
+          schedule:
+            - cron: "10 6 * * 1"
+        permissions:
+          contents: read
+          pull-requests: read
+        jobs:
+          report:
+            runs-on: ubuntu-latest
+            timeout-minutes: 30
+            steps:
+              - name: Collect pull request titles
+                run: |
+                  for n in $(seq 1 1500); do
+                    gh api "repos/devquest/shop/pulls/$n" --jq .title >> titles.txt
+                  done
+                  echo "Pull requests: $(wc -l < titles.txt)"
+                env:
+                  GH_TOKEN: \${{ github.token }}
+      ` },
+      world: { app: { prCount: 1500 } },
+      events: ["dispatch"], verify: ["dispatch"],
+      checks: [["The report counts 1500 pull requests", (v) => /Pull requests: 1500/.test(text(v.run(0)))], ["The run passes", (v) => ok(v.run(0))]],
+      hints: [
+        "How many API requests does the loop make, and what is the GITHUB_TOKEN's hourly limit?",
+        "The GITHUB_TOKEN allows 1,000 REST requests an hour per repository. List endpoints return up to 100 items per request.",
+        "Replace the loop with one paginated call: `gh api \"repos/devquest/shop/pulls?state=all&per_page=100\" --paginate --jq '.[].title' > titles.txt`."
+      ],
+      lesson: "Batch API calls: list endpoints with per_page=100 and --paginate, or GraphQL. Sleeping in a loop only makes it slower."
+    },
     // --- Caching and artifacts ---------------------------------------------------------------
     {
       id: "cache-key", group: "Caching and artifacts", level: "05", title: "Cache not found for input keys",
@@ -1854,6 +2107,12 @@
       if (!k || !(k in session.store.cache)) return out([`X Could not find a cache matching ${k || ""} in ${root.AQEngine.FULL}`, "err"]);
       delete session.store.cache[k];
       return out([`✓ Deleted 1 cache from ${root.AQEngine.FULL}`, "ok"]);
+    }
+    if (a === "api" && b === "rate_limit") return out(JSON.stringify({ resources: { core: { limit: 1000, used: 12, remaining: 988 } } }, null, 2));
+    if (a === "api" && rest.includes("--paginate")) {
+      const total = (w.app && w.app.prCount) || 40;
+      const per = Number((/per_page=(\d+)/.exec(b || "") || [])[1]) || 30;
+      return out(`(${total} items in ${Math.ceil(total / Math.min(100, per))} requests)`);
     }
     if (a === "api" && /actions\/permissions\/workflow$/.test(b || "")) return out(JSON.stringify({ default_workflow_permissions: w.repo.permissive ? "write" : "read", can_approve_pull_request_reviews: false }, null, 2));
     if (["run", "workflow", "secret", "variable", "cache", "attestation", "pr", "release", "api", "auth", "repo", "ruleset", "extension"].includes(a)) return out([LAB, "dim"]);

@@ -15,7 +15,7 @@ let seed = 20261030;
 const rand = (n) => { seed = (seed * 1103515245 + 12345) % 2147483648; return seed % n; };
 const pick = (list) => list[rand(list.length)];
 
-const PIECES = ["name: CI", "on: push", "on: [push, pull_request]", "on:", "  push:", "    branches: [main]", "    tags: ['v*']", "    paths: ['app/**']", "  pull_request_target:", "  workflow_dispatch:",
+const PIECES = ["name: CI", "on: push", "on: [push, pull_request]", "on:", "  push:", "    branches: [main]", "    tags: ['v*']", "    paths: ['app/**']", "  pull_request_target:", "  workflow_dispatch:", "  merge_group:", "        lfs: true", "          token: ${{ secrets.RELEASE_APP_TOKEN }}", "    defaults:", "      run:", "        shell: pwsh", "        shell: cmd", "    runs-on: windows-latest",
   "    inputs:", "      env:", "        type: choice", "        options: [a, b]", "  schedule:", "    - cron: '0 0 * * *'", "permissions: write-all", "permissions:", "  contents: read", "  id-token: write",
   "  pull-requests: write", "concurrency:", "  group: ${{ github.ref }}", "  cancel-in-progress: true", "env:", "  A: ${{ secrets.X }}", "jobs:", "  test:", "  deploy:", "    needs: test", "    needs: [test, nope]",
   "    if: github.event_name == 'push'", "    if: ${{ secrets.A }}", "    if: ${{ github.ref }} == 'x'", "    runs-on: ubuntu-latest", "    runs-on: [self-hosted, linux]", "    runs-on: ${{ matrix.os }}", "    environment: production",
@@ -28,11 +28,11 @@ const PIECES = ["name: CI", "on: push", "on: [push, pull_request]", "on:", "  pu
   "        continue-on-error: true", "        shell: bash", "        env:", "          GH_TOKEN: ${{ github.token }}", "        timeout-minutes: 0", "", "#", "---", "\t", "- -", ": :", "key: 'unclosed", "k: \"a\\q\"", "x: [a, {b: c", "  - ", "y: |", "z: >-", "&a b", "*a", "!!str x", "@x", "`x`", "a: b: c"];
 const SHELL = ["echo", "a", "\"$A\"", "'b'", "&&", "||", "|", ";", ">", ">>", "\"$GITHUB_ENV\"", "\"$GITHUB_OUTPUT\"", "x=1", "$(", ")", "exit", "2", "grep", "-c", "TODO", "src/cart.js", "cat", "base64", "if", "then", "fi", "else",
   "npm", "ci", "test", "run", "e2e", "start", "&", "docker", "push", "ghcr.io/devquest/shop:1", "login", "--password-stdin", "gh", "release", "create", "git", "push", "describe", "curl", "https://attacker.example/x.sh", "bash", "-c", "\"",
-  "'", "\\", "${A:-x}", "$?", "sudo", "rm", "-rf", "/usr/local/lib/android", "aws", "sts", "get-caller-identity", "pytest", "python", "-m", "make", "for", "do", "done", "<<EOF", "EOF", "::error::x", "::set-output name=a::b", "::add-mask::x"];
+  "'", "\\", "${A:-x}", "$?", "sudo", "rm", "-rf", "/usr/local/lib/android", "aws", "sts", "get-caller-identity", "pytest", "python", "-m", "make", "for", "do", "done", "<<EOF", "EOF", "while", "until", "in", "$(seq 1 3)", "seq", "1", "3", "x", "$x", "gh api repos/devquest/shop/pulls --paginate", "git tag v1", "git push origin v1", "::error::x", "::set-output name=a::b", "::add-mask::x"];
 const EXPR = ["github", ".", "event", "pull_request", "title", "==", "!=", "&&", "||", "!", "(", ")", "'a'", "1", "true", "null", "contains(", "startsWith(", "format(", "fromJSON(", "toJSON(", "hashFiles(", "success()", "always()",
   ",", "[", "]", "*", "matrix", "secrets", "nope(", "'unterminated", ">", "<=", "-1", "0x1f", "1e3"];
 const GH = ["gh run list", "gh run view", "gh run view --log-failed", "gh run view 1", "gh run rerun", "gh workflow run ci.yml -f environment=staging", "gh workflow run x.yml", "gh workflow list", "gh secret list", "gh secret set A --body b",
-  "gh secret set A --app dependabot", "gh secret delete A", "gh secret set", "gh variable set V --body 1", "gh cache list", "gh cache delete --all", "gh cache delete nope", "gh api repos/a/b/actions/permissions/workflow", "gh run watch", "gh nope", "ls", "gh \"", ""];
+  "gh secret set A --app dependabot", "gh secret delete A", "gh secret set", "gh variable set V --body 1", "gh cache list", "gh cache delete --all", "gh cache delete nope", "gh api repos/a/b/actions/permissions/workflow", "gh run watch", "gh api rate_limit", "gh api repos/devquest/shop/pulls --paginate", "gh nope", "ls", "gh \"", ""];
 
 const rounds = Number(process.argv[2]) || 3000;
 let n = 0;
