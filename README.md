@@ -7,6 +7,26 @@ A practical GitHub Actions learning repository covering CI, testing, security sc
 [![GitHub stars](https://img.shields.io/github/stars/SandeepKomal/GitHub-Actions?style=flat)](https://github.com/SandeepKomal/GitHub-Actions/stargazers)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
+## Actions Quest: the learning site
+
+**[sandeepkomal.github.io/GitHub-Actions](https://sandeepkomal.github.io/GitHub-Actions/)** teaches GitHub Actions by fixing broken pipelines, in the browser, with no account:
+
+- **Playground**: a workflow simulator. Edit the YAML, send an event (push, pull request, a fork, workflow_dispatch with inputs, a schedule, a tag) and read the run job by job: needs, matrices, `if:`, step logs, exit codes, cache hits, artifacts, environments with reviewers, concurrency, token permissions and secrets on forks. 56 scenarios from a missing `runs-on` to pwn requests and OIDC trust policies, each with three hints and real error messages.
+- **Path**: 12 levels, each with a lab in your own fork that uses this repository's workflows.
+- **Workflow X-ray**: paste a workflow; every key is explained and risky patterns are flagged.
+- **Troubleshoot**: the error messages Actions prints, each with cause, how to confirm, fix and prevention. Also as a [plain page](https://sandeepkomal.github.io/GitHub-Actions/problems.html).
+- **Quiz**, **cheat sheet** and an interactive **architecture** page.
+
+The site is static (`site/`), loads nothing from other sites and keeps progress only in your browser. Run its tests with Node.js, no install needed:
+
+```bash
+node tests/check_playground.js   # every scenario starts broken; fixes work, wrong moves do not
+node tests/fuzz_playground.js    # thousands of malformed inputs, zero exceptions
+node tests/check_site_data.js    # quiz, Troubleshoot, cheat sheet, problems page in sync
+node tests/check_xray.js
+node tools/build-problems.js     # after changing the Troubleshoot data
+```
+
 ## What this repository demonstrates
 
 - GitHub Actions fundamentals: events, jobs, steps, matrices, artifacts, and reusable patterns
@@ -22,8 +42,10 @@ A practical GitHub Actions learning repository covering CI, testing, security sc
 
 ```text
 .github/workflows/
-├── ci.yml                 # Main Python CI workflow
+├── ci.yml                 # Python CI (pinned actions, pip cache) and the site's tests
 ├── first-actions.yml      # Simple matrix example
+├── pages.yml              # Publishes site/ to GitHub Pages
+├── reusable-ci.yml        # A reusable workflow (workflow_call)
 └── security.yml           # CodeQL + dependency/security checks
 
 examples/
@@ -34,6 +56,10 @@ examples/
 src/
 └── addition.py            # Small pytest example
 
+site/                      # The Actions Quest learning site (static)
+tests/                     # Node tests and the fuzzer for the site
+tools/build-problems.js    # Builds site/problems.html
+requirements-dev.txt       # Test dependencies, also the pip cache key
 README.md
 ```
 
@@ -49,7 +75,7 @@ cd GitHub-Actions
 Run the Python example locally:
 
 ```bash
-python -m pip install pytest
+python -m pip install -r requirements-dev.txt
 python -m pytest src/addition.py
 ```
 
