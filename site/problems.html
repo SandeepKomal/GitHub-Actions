@@ -1,0 +1,764 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'none'; base-uri 'none'; form-action 'none'">
+  <meta name="description" content="GitHub Actions errors and how to fix them: 40 error messages, each with the cause, how to confirm it, the fix and how to prevent it.">
+  <meta property="og:title" content="GitHub Actions errors and fixes · Actions Quest">
+  <meta property="og:description" content="Every common GitHub Actions error message, with cause, confirmation, fix and prevention.">
+  <meta property="og:type" content="article">
+  <meta property="og:url" content="https://sandeepkomal.github.io/GitHub-Actions/problems.html">
+  <link rel="canonical" href="https://sandeepkomal.github.io/GitHub-Actions/problems.html">
+  <title>GitHub Actions errors and fixes</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="icon" href="logo.svg" type="image/svg+xml">
+</head>
+<body class="problems">
+  <header class="top">
+    <div class="wrap top-inner">
+      <a class="brand" href="index.html"><img src="logo.svg" alt="" width="22" height="22">Actions Quest</a>
+      <nav aria-label="Sections"><a href="index.html#doctor">Search errors</a><a href="index.html#playground">Playground</a></nav>
+    </div>
+  </header>
+  <main class="wrap">
+    <h1 class="problems-title">GitHub Actions errors and fixes</h1>
+    <p class="lede">40 error messages from real runs. Each has the exact text, the cause, how to confirm it, the fix, how to prevent it, and a scenario to practise on in the <a href="index.html#playground">playground</a>.</p>
+    <nav class="toc card" aria-label="Problems">
+      <h2>The workflow does not start</h2>
+      <ul>
+        <li><a href="#invalid-yaml">You have an error in your yaml syntax</a></li>
+        <li><a href="#workflow-not-valid">The workflow is not valid</a></li>
+        <li><a href="#never-runs">Nothing runs after a push</a></li>
+        <li><a href="#unknown-job">Job depends on unknown job</a></li>
+        <li><a href="#named-value">Unrecognized named-value: 'secrets'</a></li>
+        <li><a href="#unable-to-resolve">Unable to resolve action</a></li>
+        <li><a href="#billing">Recent account payments have failed</a></li>
+      </ul>
+      <h2>A step or job fails</h2>
+      <ul>
+        <li><a href="#exit-code">Process completed with exit code 1</a></li>
+        <li><a href="#command-not-found">command not found (exit code 127)</a></li>
+        <li><a href="#canceled">The operation was canceled</a></li>
+        <li><a href="#max-time">Exceeded the maximum execution time</a></li>
+        <li><a href="#waiting-runner">Waiting for a runner to pick up this job</a></li>
+        <li><a href="#no-space">No space left on device</a></li>
+        <li><a href="#git-describe">fatal: No names found, cannot describe anything</a></li>
+        <li><a href="#service-unreachable">Service container unreachable</a></li>
+        <li><a href="#python-version">The version '3.1' was not found</a></li>
+      </ul>
+      <h2>Secrets and permissions</h2>
+      <ul>
+        <li><a href="#not-accessible">Resource not accessible by integration</a></li>
+        <li><a href="#write-package">denied: permission_denied: write_package</a></li>
+        <li><a href="#secrets-empty">A secret is empty</a></li>
+        <li><a href="#gh-token">gh needs GH_TOKEN</a></li>
+        <li><a href="#git-push-403">Permission to repo.git denied to github-actions[bot]</a></li>
+        <li><a href="#token-no-trigger">A push by the workflow starts no other workflow</a></li>
+        <li><a href="#rate-limit">API rate limit exceeded for installation</a></li>
+      </ul>
+      <h2>Caching and artifacts</h2>
+      <ul>
+        <li><a href="#cache-miss">Cache not found for input keys</a></li>
+        <li><a href="#pip-no-file">No file matched to [**/requirements.txt]</a></li>
+        <li><a href="#lockfile-not-found">Dependencies lock file is not found</a></li>
+        <li><a href="#artifact-not-found">Unable to download artifact(s): Artifact not found</a></li>
+        <li><a href="#artifact-conflict">(409) Conflict: an artifact with this name already exists</a></li>
+        <li><a href="#no-files-found">No files were found with the provided path</a></li>
+      </ul>
+      <h2>Deprecations and upgrades</h2>
+      <ul>
+        <li><a href="#artifact-v3">Automatically failed: deprecated version</a></li>
+        <li><a href="#node20">Node.js 20 actions are deprecated</a></li>
+        <li><a href="#set-output">The set-output command is deprecated</a></li>
+      </ul>
+      <h2>Deployments and cloud</h2>
+      <ul>
+        <li><a href="#oidc-id-token">Credentials could not be loaded (OIDC)</a></li>
+        <li><a href="#assume-role">Not authorized to perform sts:AssumeRoleWithWebIdentity</a></li>
+        <li><a href="#env-branch">Branch is not allowed to deploy</a></li>
+        <li><a href="#concurrency-cancel">Canceling since a higher priority waiting request exists</a></li>
+        <li><a href="#waiting-review">Waiting for review</a></li>
+      </ul>
+      <h2>Reuse</h2>
+      <ul>
+        <li><a href="#local-action">Can't find 'action.yml'</a></li>
+        <li><a href="#shell-missing">Required property is missing: shell</a></li>
+        <li><a href="#invalid-secret">Invalid secret, X is not defined in the referenced workflow</a></li>
+      </ul>
+    </nav>
+    <section class="card answer" id="invalid-yaml">
+      <h2>You have an error in your yaml syntax</h2>
+      <h3>Error</h3>
+      <pre class="err"><code>Invalid workflow file: .github/workflows/ci.yml#L9
+You have an error in your yaml syntax on line 9</code></pre>
+      <h3>Symptom</h3>
+      <p>A red run with no jobs, or no run at all, right after you changed the workflow.</p>
+      <h3>Cause</h3>
+      <p>The file is not valid YAML: wrong indentation, a tab, an unquoted value containing <code>: </code>, or a key under the wrong item.</p>
+      <h3>Confirm</h3>
+      <pre><code>actionlint .github/workflows/ci.yml
+python3 -c &quot;import yaml,sys; yaml.safe_load(open(sys.argv[1]))&quot; .github/workflows/ci.yml</code></pre>
+      <h3>Fix</h3>
+      <p>Go to the line named and the one above it. Align keys with their siblings, use spaces only, and quote values containing <code>: </code> or starting with <code>*</code>, <code>&amp;</code>, <code>!</code>, <code>@</code> or a backtick.</p>
+      <h3>Prevent</h3>
+      <p>Run actionlint in your editor or as a pre-commit hook.</p>
+      <p class="note">Practise it: <a href="index.html#play/indent">You have an error in your yaml syntax</a>. Learn it: <a href="index.html#path">Level 01 · Your first workflow</a>. <a href="index.html#fix/invalid-yaml">Open in the app</a>.</p>
+    </section>
+    <section class="card answer" id="workflow-not-valid">
+      <h2>The workflow is not valid</h2>
+      <h3>Error</h3>
+      <pre class="err"><code>The workflow is not valid. .github/workflows/ci.yml (Line: 4, Col: 3): Required property is missing: runs-on</code></pre>
+      <h3>Symptom</h3>
+      <p>The run fails at once with a line and column, before any job starts.</p>
+      <h3>Cause</h3>
+      <p>Valid YAML that GitHub's schema rejects: a missing required key (runs-on, steps), an unknown key (<code>Unexpected value 'stepz'</code>), a bad permission name, or <code>uses:</code> without @ref.</p>
+      <h3>Confirm</h3>
+      <pre><code>gh run view &lt;run-id&gt;
+actionlint .github/workflows/ci.yml</code></pre>
+      <h3>Fix</h3>
+      <p>Fix the key at the line and column given. <code>Unexpected value 'x'</code> usually means a typo or a key indented under the wrong parent.</p>
+      <h3>Prevent</h3>
+      <p>actionlint knows the schema; run it in CI on workflow changes.</p>
+      <p class="note">Practise it: <a href="index.html#play/runs-on">Required property is missing: runs-on</a>, <a href="index.html#play/indent">You have an error in your yaml syntax</a>. Learn it: <a href="index.html#path">Level 01 · Your first workflow</a>. <a href="index.html#fix/workflow-not-valid">Open in the app</a>.</p>
+    </section>
+    <section class="card answer" id="never-runs">
+      <h2>Nothing runs after a push</h2>
+      <h3>Error</h3>
+      <pre class="err"><code>(no run appears in the Actions tab)</code></pre>
+      <h3>Symptom</h3>
+      <p>You push or open a pull request and the workflow does not appear at all.</p>
+      <h3>Cause</h3>
+      <p>A filter excludes the event: <code>branches</code> naming master instead of main, <code>paths</code> not matching the changed files, tags pushed to a branches-only trigger, a schedule on a non-default branch, workflows disabled on a fork, or a commit message with [skip ci].</p>
+      <h3>Confirm</h3>
+      <pre><code>gh run list --workflow ci.yml --limit 5
+gh workflow view ci.yml
+git log -1 --format=%B   # [skip ci]?</code></pre>
+      <h3>Fix</h3>
+      <p>Match filters to the real branch names and layout, add <code>tags:</code> for tag pushes, keep schedules on the default branch, and enable Actions on forks.</p>
+      <h3>Prevent</h3>
+      <p>Use workflow_dispatch to test triggers by hand; avoid paths filters on required checks.</p>
+      <p class="note">Practise it: <a href="index.html#play/branch-filter">The workflow never runs</a>, <a href="index.html#play/path-filter">Paths filter skips the code that changed</a>, <a href="index.html#play/tag-release">Pushing a tag does not release</a>, <a href="index.html#play/schedule">The nightly job never runs</a>. Learn it: <a href="index.html#path">Level 02 · When workflows run</a>. <a href="index.html#fix/never-runs">Open in the app</a>.</p>
+    </section>
+    <section class="card answer" id="unknown-job">
+      <h2>Job depends on unknown job</h2>
+      <h3>Error</h3>
+      <pre class="err"><code>The workflow is not valid. .github/workflows/ci.yml (Line: 22, Col: 5): Job 'deploy' depends on unknown job 'tests'.</code></pre>
+      <h3>Symptom</h3>
+      <p>The workflow is rejected after renaming a job.</p>
+      <h3>Cause</h3>
+      <p><code>needs:</code> names a job id that does not exist, often after a rename. Job ids, not names, are used.</p>
+      <h3>Confirm</h3>
+      <pre><code>grep -n 'needs:' .github/workflows/ci.yml</code></pre>
+      <h3>Fix</h3>
+      <p>Use the job's id (the key under <code>jobs:</code>).</p>
+      <h3>Prevent</h3>
+      <p>Rename ids and their needs together.</p>
+      <p class="note">Practise it: <a href="index.html#play/needs-order">Deploy does not wait for the tests</a>. Learn it: <a href="index.html#path">Level 04 · Jobs that work together</a>. <a href="index.html#fix/unknown-job">Open in the app</a>.</p>
+    </section>
+    <section class="card answer" id="named-value">
+      <h2>Unrecognized named-value: 'secrets'</h2>
+      <h3>Error</h3>
+      <pre class="err"><code>The workflow is not valid. .github/workflows/ci.yml (Line: 14, Col: 9): Unrecognized named-value: 'secrets'. Located at position 1 within expression: secrets.TOKEN != ''</code></pre>
+      <h3>Symptom</h3>
+      <p>Validation fails on an <code>if:</code> or a job-level key.</p>
+      <h3>Cause</h3>
+      <p>That context is not available there. <code>secrets</code> is never available in <code>if:</code>; <code>env</code> and <code>steps</code> are not available in a job-level <code>if:</code>.</p>
+      <h3>Confirm</h3>
+      <pre><code>grep -n 'if:' .github/workflows/ci.yml</code></pre>
+      <h3>Fix</h3>
+      <p>Test something available instead (github.event_name, github.repository), or copy the secret to a step env variable and test that in a later step.</p>
+      <h3>Prevent</h3>
+      <p>Check GitHub's context availability table when writing conditions.</p>
+      <p class="note">Practise it: <a href="index.html#play/fork-secret">Secret is empty on a fork pull request</a>. Learn it: <a href="index.html#path">Level 03 · Deciding at run time</a>. <a href="index.html#fix/named-value">Open in the app</a>.</p>
+    </section>
+    <section class="card answer" id="unable-to-resolve">
+      <h2>Unable to resolve action</h2>
+      <h3>Error</h3>
+      <pre class="err"><code>Error: Unable to resolve action `actions/chekout@v6`, repository not found</code></pre>
+      <h3>Symptom</h3>
+      <p>The job fails in Set up job, before any step.</p>
+      <h3>Cause</h3>
+      <p><code>repository not found</code>: the owner or name is wrong, or a private action is not shared. <code>unable to find version</code>: the tag, branch or SHA does not exist (or was deleted).</p>
+      <h3>Confirm</h3>
+      <pre><code>git ls-remote --tags https://github.com/actions/checkout
+gh api repos/actions/checkout/releases/latest --jq .tag_name</code></pre>
+      <h3>Fix</h3>
+      <p>Correct the name; use an existing tag, or better a full commit SHA with the version in a comment.</p>
+      <h3>Prevent</h3>
+      <p>Let Dependabot (package-ecosystem: github-actions) update versions.</p>
+      <p class="note">Practise it: <a href="index.html#play/action-typo">Unable to resolve action</a>, <a href="index.html#play/unpinned">A third-party action's tag was moved</a>. Learn it: <a href="index.html#path">Level 01 · Your first workflow</a>. <a href="index.html#fix/unable-to-resolve">Open in the app</a>.</p>
+    </section>
+    <section class="card answer" id="billing">
+      <h2>Recent account payments have failed</h2>
+      <h3>Error</h3>
+      <pre class="err"><code>The job was not started because recent account payments have failed or your spending limit needs to be increased. Please check the 'Billing &amp; plans' section in your settings</code></pre>
+      <h3>Symptom</h3>
+      <p>Jobs fail instantly in a private repository; public repositories still run.</p>
+      <h3>Cause</h3>
+      <p>Billing applies only to private repositories (and larger runners): their included minutes ran out with no payment method or with a spending limit of zero, or a payment failed. Standard GitHub-hosted runners are free for public repositories.</p>
+      <h3>Confirm</h3>
+      <pre><code>gh api /users/&lt;user&gt;/settings/billing/usage   # or Settings &gt; Billing and plans</code></pre>
+      <h3>Fix</h3>
+      <p>Fix the payment method or raise the spending limit; or make the repository public; or use a self-hosted runner for private work.</p>
+      <h3>Prevent</h3>
+      <p>Cancel superseded runs with concurrency, add timeouts, and avoid macOS and Windows minutes (10 and 2 times as expensive) where Linux will do.</p>
+      <p class="note">Practise it: <a href="index.html#play/stale-runs">Every push to a pull request runs to the end</a>, <a href="index.html#play/matrix-size">The matrix makes 60 jobs</a>. Learn it: <a href="index.html#path">Level 05 · Fast and reliable builds</a>. <a href="index.html#fix/billing">Open in the app</a>.</p>
+    </section>
+    <section class="card answer" id="exit-code">
+      <h2>Process completed with exit code 1</h2>
+      <h3>Error</h3>
+      <pre class="err"><code>Error: Process completed with exit code 1.</code></pre>
+      <h3>Symptom</h3>
+      <p>A run step turns red; the line above the error is the command's own output.</p>
+      <h3>Cause</h3>
+      <p>A command in the script exited non-zero. Run steps use <code>bash -e</code>, so the first failing command stops the step. Some commands use 1 for normal results: grep with no match, diff with differences.</p>
+      <h3>Confirm</h3>
+      <pre><code>gh run view &lt;run-id&gt; --log-failed
+# run the same commands locally with: bash -e script.sh</code></pre>
+      <h3>Fix</h3>
+      <p>Read the output just above the error. Fix the command, or accept an expected code where you call it (<code>grep -c x f || true</code>). Do not use continue-on-error to hide it.</p>
+      <h3>Prevent</h3>
+      <p>Use <code>shell: bash</code> (adds pipefail) and test scripts locally.</p>
+      <p class="note">Practise it: <a href="index.html#play/exit-code">Process completed with exit code 1</a>, <a href="index.html#play/hidden-failure">continue-on-error hides a failing test</a>, <a href="index.html#play/env-steps">A variable set in one step is empty in the next</a>. Learn it: <a href="index.html#path">Level 01 · Your first workflow</a>. <a href="index.html#fix/exit-code">Open in the app</a>.</p>
+    </section>
+    <section class="card answer" id="command-not-found">
+      <h2>command not found (exit code 127)</h2>
+      <h3>Error</h3>
+      <pre class="err"><code>/home/runner/work/_temp/0f3c9b2e.sh: line 1: foo: command not found
+Error: Process completed with exit code 127.</code></pre>
+      <h3>Symptom</h3>
+      <p>A tool that works on your laptop is missing on the runner.</p>
+      <h3>Cause</h3>
+      <p>The runner image does not have it, it is not on PATH, or an earlier setup step was skipped. Exit code 127 always means command not found.</p>
+      <h3>Confirm</h3>
+      <pre><code>which foo   # in a step
+echo &quot;$PATH&quot;</code></pre>
+      <h3>Fix</h3>
+      <p>Install it in a step, use a setup-* action, or run the job in a container that has it. Add install directories to $GITHUB_PATH.</p>
+      <h3>Prevent</h3>
+      <p>Pin tool versions and install them explicitly.</p>
+      <p class="note">Practise it: <a href="index.html#play/exit-code">Process completed with exit code 1</a>. Learn it: <a href="index.html#path">Level 01 · Your first workflow</a>. <a href="index.html#fix/command-not-found">Open in the app</a>.</p>
+    </section>
+    <section class="card answer" id="canceled">
+      <h2>The operation was canceled</h2>
+      <h3>Error</h3>
+      <pre class="err"><code>Error: The operation was canceled.</code></pre>
+      <h3>Symptom</h3>
+      <p>A job stops without failing on its own.</p>
+      <h3>Cause</h3>
+      <p>Something canceled it: fail-fast after another matrix job failed, a newer run in the same concurrency group, a timeout, or a person.</p>
+      <h3>Confirm</h3>
+      <pre><code>gh run view &lt;run-id&gt;   # which job failed first?</code></pre>
+      <h3>Fix</h3>
+      <p>Find the first failure, or the newer run. Set <code>fail-fast: false</code> to see every matrix result.</p>
+      <h3>Prevent</h3>
+      <p>Use timeouts and concurrency deliberately.</p>
+      <p class="note">Practise it: <a href="index.html#play/fail-fast">The operation was canceled</a>, <a href="index.html#play/hang">The job ran for 6 hours</a>. Learn it: <a href="index.html#path">Level 04 · Jobs that work together</a>. <a href="index.html#fix/canceled">Open in the app</a>.</p>
+    </section>
+    <section class="card answer" id="max-time">
+      <h2>Exceeded the maximum execution time</h2>
+      <h3>Error</h3>
+      <pre class="err"><code>The job running on runner GitHub Actions 3 has exceeded the maximum execution time of 360 minutes.</code></pre>
+      <h3>Symptom</h3>
+      <p>A job ran for hours and was killed.</p>
+      <h3>Cause</h3>
+      <p>Something never exited: a server started in the foreground, a prompt waiting for input, a watch mode, a deadlock. The default timeout is 360 minutes.</p>
+      <h3>Confirm</h3>
+      <pre><code>gh run view &lt;run-id&gt; --log | tail -50</code></pre>
+      <h3>Fix</h3>
+      <p>Background servers with <code>&amp;</code>, pass non-interactive flags, and set <code>timeout-minutes</code> near the real duration.</p>
+      <h3>Prevent</h3>
+      <p>Every job gets timeout-minutes.</p>
+      <p class="note">Practise it: <a href="index.html#play/hang">The job ran for 6 hours</a>. Learn it: <a href="index.html#path">Level 05 · Fast and reliable builds</a>. <a href="index.html#fix/max-time">Open in the app</a>.</p>
+    </section>
+    <section class="card answer" id="waiting-runner">
+      <h2>Waiting for a runner to pick up this job</h2>
+      <h3>Error</h3>
+      <pre class="err"><code>Requested labels: ubuntu-lastest
+Waiting for a runner to pick up this job...</code></pre>
+      <h3>Symptom</h3>
+      <p>A job stays queued for minutes or hours.</p>
+      <h3>Cause</h3>
+      <p>No runner has all the requested labels (a typo, a missing self-hosted runner), the self-hosted runner is offline, or concurrency limits are reached.</p>
+      <h3>Confirm</h3>
+      <pre><code>gh api repos/&lt;owner&gt;/&lt;repo&gt;/actions/runners --jq '.runners[] | {name, status, labels: [.labels[].name]}'</code></pre>
+      <h3>Fix</h3>
+      <p>Fix the label (ubuntu-latest), bring the runner online, or wait for capacity.</p>
+      <h3>Prevent</h3>
+      <p>Keep runner labels in one place and review them.</p>
+      <p class="note">Practise it: <a href="index.html#play/runner-label">Waiting for a runner to pick up this job</a>, <a href="index.html#play/self-hosted">Fork pull requests run on your self-hosted runner</a>. Learn it: <a href="index.html#path">Level 05 · Fast and reliable builds</a>. <a href="index.html#fix/waiting-runner">Open in the app</a>.</p>
+    </section>
+    <section class="card answer" id="no-space">
+      <h2>No space left on device</h2>
+      <h3>Error</h3>
+      <pre class="err"><code>ERROR: failed to build: failed to solve: ... no space left on device
+You are running out of disk space. The runner will stop working when the machine runs out of disk space.</code></pre>
+      <h3>Symptom</h3>
+      <p>Big builds fail halfway on a hosted runner.</p>
+      <h3>Cause</h3>
+      <p>The free disk on the runner is used up by the build, images and caches.</p>
+      <h3>Confirm</h3>
+      <pre><code>df -h   # in a step before the build
+du -sh /usr/local/lib/android /usr/share/dotnet /opt/ghc</code></pre>
+      <h3>Fix</h3>
+      <p>Remove unused preinstalled toolchains before the build, prune Docker, slim the build (multi-stage, .dockerignore), or use a larger runner.</p>
+      <h3>Prevent</h3>
+      <p>Keep images small; watch build size.</p>
+      <p class="note">Practise it: <a href="index.html#play/disk-full">No space left on device</a>. Learn it: <a href="index.html#path">Level 05 · Fast and reliable builds</a>. <a href="index.html#fix/no-space">Open in the app</a>.</p>
+    </section>
+    <section class="card answer" id="git-describe">
+      <h2>fatal: No names found, cannot describe anything</h2>
+      <h3>Error</h3>
+      <pre class="err"><code>fatal: No names found, cannot describe anything.</code></pre>
+      <h3>Symptom</h3>
+      <p>Versioning or changelog steps fail only in CI.</p>
+      <h3>Cause</h3>
+      <p>actions/checkout makes a shallow clone of one commit, without tags.</p>
+      <h3>Confirm</h3>
+      <pre><code>git log --oneline | wc -l   # in a step
+git tag | wc -l</code></pre>
+      <h3>Fix</h3>
+      <p>Set <code>fetch-depth: 0</code> on actions/checkout (or <code>git fetch --tags</code>).</p>
+      <h3>Prevent</h3>
+      <p>Fetch history only in jobs that need it.</p>
+      <p class="note">Practise it: <a href="index.html#play/fetch-depth">fatal: No names found, cannot describe anything</a>. Learn it: <a href="index.html#path">Level 02 · When workflows run</a>. <a href="index.html#fix/git-describe">Open in the app</a>.</p>
+    </section>
+    <section class="card answer" id="service-unreachable">
+      <h2>Service container unreachable</h2>
+      <h3>Error</h3>
+      <pre class="err"><code>Error: getaddrinfo EAI_AGAIN postgres
+Error: connect ECONNREFUSED 127.0.0.1:5432</code></pre>
+      <h3>Symptom</h3>
+      <p>Integration tests cannot reach the database service.</p>
+      <h3>Cause</h3>
+      <p>Steps on the runner use the service name (only resolvable from a job container), the port is not mapped, or the service is not ready yet.</p>
+      <h3>Confirm</h3>
+      <pre><code>docker ps   # in a step
+pg_isready -h localhost -p 5432</code></pre>
+      <h3>Fix</h3>
+      <p>On the runner, map <code>ports: [&quot;5432:5432&quot;]</code> and use localhost; in a job container, use the service name. Add a health check in <code>options</code>.</p>
+      <h3>Prevent</h3>
+      <p>Write the connection settings for where the steps run.</p>
+      <p class="note">Practise it: <a href="index.html#play/service-db">getaddrinfo EAI_AGAIN postgres</a>. Learn it: <a href="index.html#path">Level 05 · Fast and reliable builds</a>. <a href="index.html#fix/service-unreachable">Open in the app</a>.</p>
+    </section>
+    <section class="card answer" id="python-version">
+      <h2>The version '3.1' was not found</h2>
+      <h3>Error</h3>
+      <pre class="err"><code>The version '3.1' with architecture 'x64' was not found for Ubuntu 24.04.
+The list of all available versions can be found here: https://raw.githubusercontent.com/actions/python-versions/main/versions-manifest.json</code></pre>
+      <h3>Symptom</h3>
+      <p>setup-python fails for a version you did not write.</p>
+      <h3>Cause</h3>
+      <p>YAML read 3.10 as the number 3.1.</p>
+      <h3>Confirm</h3>
+      <pre><code>grep -n 'python' .github/workflows/*.yml</code></pre>
+      <h3>Fix</h3>
+      <p>Quote versions: &quot;3.10&quot;.</p>
+      <h3>Prevent</h3>
+      <p>Always quote version numbers in YAML.</p>
+      <p class="note">Practise it: <a href="index.html#play/float-version">The version '3.1' was not found</a>. Learn it: <a href="index.html#path">Level 04 · Jobs that work together</a>. <a href="index.html#fix/python-version">Open in the app</a>.</p>
+    </section>
+    <section class="card answer" id="not-accessible">
+      <h2>Resource not accessible by integration</h2>
+      <h3>Error</h3>
+      <pre class="err"><code>GraphQL: Resource not accessible by integration (addComment)</code></pre>
+      <h3>Symptom</h3>
+      <p>A step calling the GitHub API with the GITHUB_TOKEN gets 403.</p>
+      <h3>Cause</h3>
+      <p>The token lacks the permission the call needs, or the run is from a fork or Dependabot, where it is read-only.</p>
+      <h3>Confirm</h3>
+      <pre><code># Set up job lists the token's permissions
+gh run view &lt;run-id&gt; --log | grep -A12 'GITHUB_TOKEN Permissions'</code></pre>
+      <h3>Fix</h3>
+      <p>Add the one scope needed (pull-requests: write to comment, contents: write to release). For forks, comment from a separate trusted workflow.</p>
+      <h3>Prevent</h3>
+      <p>Declare permissions per workflow, least privilege first.</p>
+      <p class="note">Practise it: <a href="index.html#play/pr-comment">Resource not accessible by integration</a>. Learn it: <a href="index.html#path">Level 07 · Least privilege</a>. <a href="index.html#fix/not-accessible">Open in the app</a>.</p>
+    </section>
+    <section class="card answer" id="write-package">
+      <h2>denied: permission_denied: write_package</h2>
+      <h3>Error</h3>
+      <pre class="err"><code>denied: permission_denied: write_package</code></pre>
+      <h3>Symptom</h3>
+      <p>docker push to ghcr.io is denied after a successful login.</p>
+      <h3>Cause</h3>
+      <p>The GITHUB_TOKEN does not have packages: write, or the package is not linked to this repository.</p>
+      <h3>Confirm</h3>
+      <pre><code>gh api /user/packages?package_type=container   # with a personal token</code></pre>
+      <h3>Fix</h3>
+      <p>Add <code>packages: write</code>. If the package exists already, give this repository access in the package settings.</p>
+      <h3>Prevent</h3>
+      <p>Grant packages: write only in the publishing job.</p>
+      <p class="note">Practise it: <a href="index.html#play/ghcr-push">denied: permission_denied: write_package</a>. Learn it: <a href="index.html#path">Level 07 · Least privilege</a>. <a href="index.html#fix/write-package">Open in the app</a>.</p>
+    </section>
+    <section class="card answer" id="secrets-empty">
+      <h2>A secret is empty</h2>
+      <h3>Error</h3>
+      <pre class="err"><code>deploy: DEPLOY_TOKEN is empty; cannot authenticate to production</code></pre>
+      <h3>Symptom</h3>
+      <p>A step that needs a secret fails as if it were not set, but it is set in settings.</p>
+      <h3>Cause</h3>
+      <p>Fork pull requests and Dependabot get no Actions secrets; environment secrets need <code>environment:</code> on the job; reusable workflows need secrets passed; or the name is misspelt (empty, no error).</p>
+      <h3>Confirm</h3>
+      <pre><code>gh secret list
+gh secret list --env production
+gh secret list --app dependabot</code></pre>
+      <h3>Fix</h3>
+      <p>Skip the step for forks, add Dependabot secrets, declare the environment, pass <code>secrets: inherit</code>, or fix the name.</p>
+      <h3>Prevent</h3>
+      <p>Fail early with a clear message when a required secret is empty.</p>
+      <p class="note">Practise it: <a href="index.html#play/fork-secret">Secret is empty on a fork pull request</a>, <a href="index.html#play/dependabot-secret">Secrets are empty on Dependabot pull requests</a>, <a href="index.html#play/env-secret">Environment secret is empty</a>, <a href="index.html#play/reusable-secrets">Reusable workflow gets empty secrets</a>. Learn it: <a href="index.html#path">Level 06 · Keeping secrets secret</a>. <a href="index.html#fix/secrets-empty">Open in the app</a>.</p>
+    </section>
+    <section class="card answer" id="gh-token">
+      <h2>gh needs GH_TOKEN</h2>
+      <h3>Error</h3>
+      <pre class="err"><code>gh: To use GitHub CLI in a GitHub Actions workflow, set the GH_TOKEN environment variable. Example:
+  env:
+    GH_TOKEN: ${{ github.token }}</code></pre>
+      <h3>Symptom</h3>
+      <p>Any gh command fails in a workflow.</p>
+      <h3>Cause</h3>
+      <p>gh does not read the token by itself in Actions.</p>
+      <h3>Confirm</h3>
+      <pre><code>env | grep GH_TOKEN   # in the step</code></pre>
+      <h3>Fix</h3>
+      <p>Set <code>GH_TOKEN: ${{ github.token }}</code> in the step's env.</p>
+      <h3>Prevent</h3>
+      <p>Use a shared step template for gh calls.</p>
+      <p class="note">Practise it: <a href="index.html#play/pr-comment">Resource not accessible by integration</a>, <a href="index.html#play/tag-release">Pushing a tag does not release</a>. Learn it: <a href="index.html#path">Level 07 · Least privilege</a>. <a href="index.html#fix/gh-token">Open in the app</a>.</p>
+    </section>
+    <section class="card answer" id="git-push-403">
+      <h2>Permission to repo.git denied to github-actions[bot]</h2>
+      <h3>Error</h3>
+      <pre class="err"><code>remote: Permission to devquest/shop.git denied to github-actions[bot].
+fatal: unable to access 'https://github.com/devquest/shop/': The requested URL returned error: 403</code></pre>
+      <h3>Symptom</h3>
+      <p>A step that commits and pushes fails.</p>
+      <h3>Cause</h3>
+      <p>The token has contents: read, or branch protection blocks the push.</p>
+      <h3>Confirm</h3>
+      <pre><code>gh api repos/&lt;owner&gt;/&lt;repo&gt;/branches/main/protection</code></pre>
+      <h3>Fix</h3>
+      <p>Grant contents: write to that job only, or open a pull request instead of pushing to a protected branch.</p>
+      <h3>Prevent</h3>
+      <p>Prefer pull requests from bots over direct pushes.</p>
+      <p class="note">Practise it: <a href="index.html#play/write-all">permissions: write-all on a lint job</a>. Learn it: <a href="index.html#path">Level 07 · Least privilege</a>. <a href="index.html#fix/git-push-403">Open in the app</a>.</p>
+    </section>
+    <section class="card answer" id="token-no-trigger">
+      <h2>A push by the workflow starts no other workflow</h2>
+      <h3>Error</h3>
+      <pre class="err"><code>(no run appears after a commit or tag pushed with the GITHUB_TOKEN)</code></pre>
+      <h3>Symptom</h3>
+      <p>A release workflow pushes a tag, but the workflow for tags never runs.</p>
+      <h3>Cause</h3>
+      <p>By design, events caused by the GITHUB_TOKEN (except workflow_dispatch and repository_dispatch) do not start new runs, to prevent loops.</p>
+      <h3>Confirm</h3>
+      <pre><code>gh run list --event push --limit 5</code></pre>
+      <h3>Fix</h3>
+      <p>Call the next workflow directly (workflow_call or gh workflow run), or push with a GitHub App token.</p>
+      <h3>Prevent</h3>
+      <p>Design release pipelines as one workflow, or chain with workflow_run.</p>
+      <p class="note">Practise it: <a href="index.html#play/tag-release">Pushing a tag does not release</a>. Learn it: <a href="index.html#path">Level 07 · Least privilege</a>. <a href="index.html#fix/token-no-trigger">Open in the app</a>.</p>
+    </section>
+    <section class="card answer" id="rate-limit">
+      <h2>API rate limit exceeded for installation</h2>
+      <h3>Error</h3>
+      <pre class="err"><code>API rate limit exceeded for installation ID 12345678.</code></pre>
+      <h3>Symptom</h3>
+      <p>Steps calling the GitHub API fail after many calls.</p>
+      <h3>Cause</h3>
+      <p>The GITHUB_TOKEN allows 1,000 REST requests per hour per repository.</p>
+      <h3>Confirm</h3>
+      <pre><code>gh api rate_limit</code></pre>
+      <h3>Fix</h3>
+      <p>Batch calls, cache results, or use a GitHub App token.</p>
+      <h3>Prevent</h3>
+      <p>Avoid polling loops against the API.</p>
+      <p class="note">Learn it: <a href="index.html#path">Level 07 · Least privilege</a>. <a href="index.html#fix/rate-limit">Open in the app</a>.</p>
+    </section>
+    <section class="card answer" id="cache-miss">
+      <h2>Cache not found for input keys</h2>
+      <h3>Error</h3>
+      <pre class="err"><code>Cache not found for input keys: npm-3e8f0f6a1c2b...</code></pre>
+      <h3>Symptom</h3>
+      <p>Every run downloads everything again.</p>
+      <h3>Cause</h3>
+      <p>The key changes every run (github.sha, run_id), the cache was saved on another branch the run cannot read, or it expired after 7 days unused.</p>
+      <h3>Confirm</h3>
+      <pre><code>gh cache list
+gh run view &lt;run-id&gt; --log | grep -i cache</code></pre>
+      <h3>Fix</h3>
+      <p>Key on the contents: <code>npm-${{ runner.os }}-${{ hashFiles('package-lock.json') }}</code>, with restore-keys for a prefix match.</p>
+      <h3>Prevent</h3>
+      <p>Let setup-node or setup-python manage the cache with <code>cache:</code>.</p>
+      <p class="note">Practise it: <a href="index.html#play/cache-key">Cache not found for input keys</a>, <a href="index.html#play/slow-build">The build takes 20 minutes</a>. Learn it: <a href="index.html#path">Level 05 · Fast and reliable builds</a>. <a href="index.html#fix/cache-miss">Open in the app</a>.</p>
+    </section>
+    <section class="card answer" id="pip-no-file">
+      <h2>No file matched to [**/requirements.txt]</h2>
+      <h3>Error</h3>
+      <pre class="err"><code>Error: No file in /home/runner/work/GitHub-Actions/GitHub-Actions matched to [**/requirements.txt or **/pyproject.toml], make sure you have checked out the target repository</code></pre>
+      <h3>Symptom</h3>
+      <p>Set up Python fails before any test. This repository's own CI failed this way.</p>
+      <h3>Cause</h3>
+      <p><code>cache: pip</code> needs a dependency file to key on; there is none with the default names, or checkout did not run first.</p>
+      <h3>Confirm</h3>
+      <pre><code>git ls-files '*requirements*' pyproject.toml</code></pre>
+      <h3>Fix</h3>
+      <p>Add <code>cache-dependency-path: requirements-dev.txt</code> (your file), or add a requirements file, and check out first.</p>
+      <h3>Prevent</h3>
+      <p>Keep dependencies in a file even for one package.</p>
+      <p class="note">Practise it: <a href="index.html#play/pip-cache">No file matched to [**/requirements.txt]</a>. Learn it: <a href="index.html#path">Level 05 · Fast and reliable builds</a>. <a href="index.html#fix/pip-no-file">Open in the app</a>.</p>
+    </section>
+    <section class="card answer" id="lockfile-not-found">
+      <h2>Dependencies lock file is not found</h2>
+      <h3>Error</h3>
+      <pre class="err"><code>Error: Dependencies lock file is not found in /home/runner/work/shop/shop. Supported file patterns: package-lock.json,npm-shrinkwrap.json,yarn.lock</code></pre>
+      <h3>Symptom</h3>
+      <p>setup-node with <code>cache: npm</code> fails.</p>
+      <h3>Cause</h3>
+      <p>No lockfile in the repository root, the lockfile is in a subfolder, or checkout did not run first.</p>
+      <h3>Confirm</h3>
+      <pre><code>git ls-files | grep -E 'package-lock|yarn.lock|pnpm-lock'</code></pre>
+      <h3>Fix</h3>
+      <p>Commit the lockfile, or set <code>cache-dependency-path: app/package-lock.json</code>.</p>
+      <h3>Prevent</h3>
+      <p>Always commit lockfiles.</p>
+      <p class="note">Practise it: <a href="index.html#play/slow-build">The build takes 20 minutes</a>. Learn it: <a href="index.html#path">Level 05 · Fast and reliable builds</a>. <a href="index.html#fix/lockfile-not-found">Open in the app</a>.</p>
+    </section>
+    <section class="card answer" id="artifact-not-found">
+      <h2>Unable to download artifact(s): Artifact not found</h2>
+      <h3>Error</h3>
+      <pre class="err"><code>Error: Unable to download artifact(s): Artifact 'build' not found</code></pre>
+      <h3>Symptom</h3>
+      <p>A job that downloads an artifact fails.</p>
+      <h3>Cause</h3>
+      <p>The name differs from the upload, the uploading job did not run or found no files, the download runs before the upload (missing needs), or it is from another run.</p>
+      <h3>Confirm</h3>
+      <pre><code>gh run view &lt;run-id&gt;   # ARTIFACTS section
+gh api repos/&lt;owner&gt;/&lt;repo&gt;/actions/runs/&lt;run-id&gt;/artifacts --jq '.artifacts[].name'</code></pre>
+      <h3>Fix</h3>
+      <p>Use the same name and add <code>needs:</code> on the uploading job. For another run, pass <code>run-id</code> and a token.</p>
+      <h3>Prevent</h3>
+      <p>Keep artifact names in one env variable.</p>
+      <p class="note">Practise it: <a href="index.html#play/artifact-name">Unable to download artifact(s): Artifact not found</a>. Learn it: <a href="index.html#path">Level 05 · Fast and reliable builds</a>. <a href="index.html#fix/artifact-not-found">Open in the app</a>.</p>
+    </section>
+    <section class="card answer" id="artifact-conflict">
+      <h2>(409) Conflict: an artifact with this name already exists</h2>
+      <h3>Error</h3>
+      <pre class="err"><code>Failed to CreateArtifact: Received non-retryable error: Failed request: (409) Conflict: an artifact with this name already exists on the workflow run</code></pre>
+      <h3>Symptom</h3>
+      <p>Matrix jobs fail at upload-artifact.</p>
+      <h3>Cause</h3>
+      <p>Since v4 names are unique per run and artifacts are immutable.</p>
+      <h3>Confirm</h3>
+      <pre><code>grep -n -A3 upload-artifact .github/workflows/*.yml</code></pre>
+      <h3>Fix</h3>
+      <p>Put the matrix values in the name; merge later with <code>download-artifact</code> and <code>pattern:</code> plus <code>merge-multiple: true</code>.</p>
+      <h3>Prevent</h3>
+      <p>Name artifacts after their matrix job.</p>
+      <p class="note">Practise it: <a href="index.html#play/artifact-conflict">(409) Conflict: an artifact with this name already exists</a>. Learn it: <a href="index.html#path">Level 05 · Fast and reliable builds</a>. <a href="index.html#fix/artifact-conflict">Open in the app</a>.</p>
+    </section>
+    <section class="card answer" id="no-files-found">
+      <h2>No files were found with the provided path</h2>
+      <h3>Error</h3>
+      <pre class="err"><code>Warning: No files were found with the provided path: dist/. No artifacts will be uploaded.</code></pre>
+      <h3>Symptom</h3>
+      <p>The upload step passes but later jobs find nothing.</p>
+      <h3>Cause</h3>
+      <p>The build wrote somewhere else, or did not run. The default <code>if-no-files-found: warn</code> does not fail.</p>
+      <h3>Confirm</h3>
+      <pre><code>ls -R dist   # in a step before the upload</code></pre>
+      <h3>Fix</h3>
+      <p>Fix the path, and set <code>if-no-files-found: error</code>.</p>
+      <h3>Prevent</h3>
+      <p>Fail loudly on missing build output.</p>
+      <p class="note">Practise it: <a href="index.html#play/artifact-name">Unable to download artifact(s): Artifact not found</a>. Learn it: <a href="index.html#path">Level 05 · Fast and reliable builds</a>. <a href="index.html#fix/no-files-found">Open in the app</a>.</p>
+    </section>
+    <section class="card answer" id="artifact-v3">
+      <h2>Automatically failed: deprecated version</h2>
+      <h3>Error</h3>
+      <pre class="err"><code>This request has been automatically failed because it uses a deprecated version of `actions/upload-artifact: v3`. Learn more: https://github.blog/changelog/2024-04-16-deprecation-notice-v3-of-the-artifact-actions/</code></pre>
+      <h3>Symptom</h3>
+      <p>An untouched workflow suddenly fails in Set up job.</p>
+      <h3>Cause</h3>
+      <p>A shut-down action version (artifact v3, cache v1 and v2).</p>
+      <h3>Confirm</h3>
+      <pre><code>grep -rn 'artifact@v3\|cache@v[12]' .github/workflows</code></pre>
+      <h3>Fix</h3>
+      <p>Move to a supported major (upload-artifact v6, download-artifact v7 or later) and check the changes in its notes.</p>
+      <h3>Prevent</h3>
+      <p>Dependabot for github-actions, as in this repository's dependabot.yml.</p>
+      <p class="note">Practise it: <a href="index.html#play/artifact-v3">This request has been automatically failed</a>. Learn it: <a href="index.html#path">Level 09 · Write it once</a>. <a href="index.html#fix/artifact-v3">Open in the app</a>.</p>
+    </section>
+    <section class="card answer" id="node20">
+      <h2>Node.js 20 actions are deprecated</h2>
+      <h3>Error</h3>
+      <pre class="err"><code>Node.js 20 actions are deprecated. The following actions are running on Node.js 20 and may not work as expected: actions/checkout@v4.</code></pre>
+      <h3>Symptom</h3>
+      <p>A long yellow warning on every run.</p>
+      <h3>Cause</h3>
+      <p>An action version declares <code>using: node20</code>, which runners are retiring.</p>
+      <h3>Confirm</h3>
+      <pre><code>gh run view &lt;run-id&gt;   # ANNOTATIONS</code></pre>
+      <h3>Fix</h3>
+      <p>Use majors that run on Node.js 24: checkout v5+, setup-node v5+, setup-python v6+, cache v5+, upload-artifact v6+, download-artifact v7+.</p>
+      <h3>Prevent</h3>
+      <p>Dependabot updates for github-actions.</p>
+      <p class="note">Practise it: <a href="index.html#play/node20">Node.js 20 actions are deprecated</a>. Learn it: <a href="index.html#path">Level 09 · Write it once</a>. <a href="index.html#fix/node20">Open in the app</a>.</p>
+    </section>
+    <section class="card answer" id="set-output">
+      <h2>The set-output command is deprecated</h2>
+      <h3>Error</h3>
+      <pre class="err"><code>The `set-output` command is deprecated and will be disabled soon. Please upgrade to using Environment Files.</code></pre>
+      <h3>Symptom</h3>
+      <p>A warning on runs of old workflows or actions.</p>
+      <h3>Cause</h3>
+      <p><code>::set-output</code> and <code>::save-state</code> workflow commands were replaced by environment files.</p>
+      <h3>Confirm</h3>
+      <pre><code>grep -rn 'set-output\|save-state' .github</code></pre>
+      <h3>Fix</h3>
+      <p>Write <code>name=value</code> to <code>$GITHUB_OUTPUT</code> (state: <code>$GITHUB_STATE</code>). For an action, update it.</p>
+      <h3>Prevent</h3>
+      <p>Keep actions current.</p>
+      <p class="note">Practise it: <a href="index.html#play/set-output">The set-output command is deprecated</a>. Learn it: <a href="index.html#path">Level 03 · Deciding at run time</a>. <a href="index.html#fix/set-output">Open in the app</a>.</p>
+    </section>
+    <section class="card answer" id="oidc-id-token">
+      <h2>Credentials could not be loaded (OIDC)</h2>
+      <h3>Error</h3>
+      <pre class="err"><code>It looks like you might be trying to authenticate with OIDC. Did you mean to set the `id-token` permission?
+Error: Credentials could not be loaded, please check your action inputs: Could not load credentials from any providers</code></pre>
+      <h3>Symptom</h3>
+      <p>configure-aws-credentials fails before contacting AWS.</p>
+      <h3>Cause</h3>
+      <p>The job cannot request an OIDC token: no <code>id-token: write</code>, or the run is from a fork.</p>
+      <h3>Confirm</h3>
+      <pre><code>gh run view &lt;run-id&gt; --log | grep -A12 'GITHUB_TOKEN Permissions'   # IdToken: write?</code></pre>
+      <h3>Fix</h3>
+      <p>Add <code>id-token: write</code> to the job's permissions.</p>
+      <h3>Prevent</h3>
+      <p>Grant id-token: write only to deploy jobs.</p>
+      <p class="note">Practise it: <a href="index.html#play/oidc">Not authorized to perform sts:AssumeRoleWithWebIdentity</a>. Learn it: <a href="index.html#path">Level 10 · No stored cloud keys</a>. <a href="index.html#fix/oidc-id-token">Open in the app</a>.</p>
+    </section>
+    <section class="card answer" id="assume-role">
+      <h2>Not authorized to perform sts:AssumeRoleWithWebIdentity</h2>
+      <h3>Error</h3>
+      <pre class="err"><code>Error: Could not assume role with OIDC: Not authorized to perform sts:AssumeRoleWithWebIdentity</code></pre>
+      <h3>Symptom</h3>
+      <p>The OIDC token is issued, AWS refuses it.</p>
+      <h3>Cause</h3>
+      <p>The token's sub or aud does not match the role's trust policy: no environment on the job, a different branch, a pull request, or a typo in the repository name. Or the OIDC provider is missing.</p>
+      <h3>Confirm</h3>
+      <pre><code>aws iam get-role --role-name &lt;role&gt; --query Role.AssumeRolePolicyDocument
+# the job's sub: repo:&lt;owner&gt;/&lt;repo&gt;:environment:&lt;name&gt; or :ref:refs/heads/&lt;branch&gt;</code></pre>
+      <h3>Fix</h3>
+      <p>Make the job match the trust policy (often <code>environment: production</code>), or narrow the policy to the job's exact sub. Do not widen it with wildcards.</p>
+      <h3>Prevent</h3>
+      <p>One role per environment, trusting one repository and environment.</p>
+      <p class="note">Practise it: <a href="index.html#play/oidc">Not authorized to perform sts:AssumeRoleWithWebIdentity</a>, <a href="index.html#play/oidc-trust">OIDC trust policy allows any repository</a>. Learn it: <a href="index.html#path">Level 10 · No stored cloud keys</a>. <a href="index.html#fix/assume-role">Open in the app</a>.</p>
+    </section>
+    <section class="card answer" id="env-branch">
+      <h2>Branch is not allowed to deploy</h2>
+      <h3>Error</h3>
+      <pre class="err"><code>Branch &quot;feature/login&quot; is not allowed to deploy to production due to environment protection rules.</code></pre>
+      <h3>Symptom</h3>
+      <p>A deploy job fails immediately on a branch.</p>
+      <h3>Cause</h3>
+      <p>The environment's deployment branch policy allows only some branches or tags.</p>
+      <h3>Confirm</h3>
+      <pre><code>gh api repos/&lt;owner&gt;/&lt;repo&gt;/environments/production --jq .deployment_branch_policy</code></pre>
+      <h3>Fix</h3>
+      <p>Deploy from an allowed branch, or change the policy if the branch should deploy.</p>
+      <h3>Prevent</h3>
+      <p>Pair environment rules with job if: conditions so runs skip instead of failing.</p>
+      <p class="note">Practise it: <a href="index.html#play/approval">Production deploys without approval</a>. Learn it: <a href="index.html#path">Level 08 · Shipping safely</a>. <a href="index.html#fix/env-branch">Open in the app</a>.</p>
+    </section>
+    <section class="card answer" id="concurrency-cancel">
+      <h2>Canceling since a higher priority waiting request exists</h2>
+      <h3>Error</h3>
+      <pre class="err"><code>Canceling since a higher priority waiting request for 'deploy' exists</code></pre>
+      <h3>Symptom</h3>
+      <p>Runs are canceled when newer runs start.</p>
+      <h3>Cause</h3>
+      <p>A concurrency group with cancel-in-progress: true, or a third run replaced a pending one (only one run waits per group).</p>
+      <h3>Confirm</h3>
+      <pre><code>grep -n -A2 concurrency .github/workflows/*.yml</code></pre>
+      <h3>Fix</h3>
+      <p>That is the setting working. For deploys, use cancel-in-progress: false so runs queue.</p>
+      <h3>Prevent</h3>
+      <p>Include the branch in the group so unrelated runs do not cancel each other.</p>
+      <p class="note">Practise it: <a href="index.html#play/concurrency">Two deploys at once: the old version wins</a>, <a href="index.html#play/stale-runs">Every push to a pull request runs to the end</a>. Learn it: <a href="index.html#path">Level 08 · Shipping safely</a>. <a href="index.html#fix/concurrency-cancel">Open in the app</a>.</p>
+    </section>
+    <section class="card answer" id="waiting-review">
+      <h2>Waiting for review</h2>
+      <h3>Error</h3>
+      <pre class="err"><code>Waiting for review: production needs approval to start deploying changes.</code></pre>
+      <h3>Symptom</h3>
+      <p>A deploy job waits and never starts.</p>
+      <h3>Cause</h3>
+      <p>The environment has required reviewers; someone must approve in the run's Review deployments.</p>
+      <h3>Confirm</h3>
+      <pre><code>gh api repos/&lt;owner&gt;/&lt;repo&gt;/actions/runs/&lt;run-id&gt;/pending_deployments</code></pre>
+      <h3>Fix</h3>
+      <p>Approve from the run page (or the API) as a required reviewer; pending deployments expire after 30 days.</p>
+      <h3>Prevent</h3>
+      <p>Notify reviewers; keep the group small but never one person.</p>
+      <p class="note">Practise it: <a href="index.html#play/approval">Production deploys without approval</a>. Learn it: <a href="index.html#path">Level 08 · Shipping safely</a>. <a href="index.html#fix/waiting-review">Open in the app</a>.</p>
+    </section>
+    <section class="card answer" id="local-action">
+      <h2>Can't find 'action.yml'</h2>
+      <h3>Error</h3>
+      <pre class="err"><code>Can't find 'action.yml', 'action.yaml' or 'Dockerfile' under '/home/runner/work/shop/shop/.github/actions/setup'. Did you forget to run actions/checkout before running your local action?</code></pre>
+      <h3>Symptom</h3>
+      <p>A step using a local action fails.</p>
+      <h3>Cause</h3>
+      <p>The repository is not checked out yet, or the path is wrong.</p>
+      <h3>Confirm</h3>
+      <pre><code>ls .github/actions/setup   # in a step</code></pre>
+      <h3>Fix</h3>
+      <p>Run actions/checkout first; use the path from the repository root starting with ./</p>
+      <h3>Prevent</h3>
+      <p>Keep checkout as the first step.</p>
+      <p class="note">Practise it: <a href="index.html#play/local-action">Can't find 'action.yml'</a>. Learn it: <a href="index.html#path">Level 09 · Write it once</a>. <a href="index.html#fix/local-action">Open in the app</a>.</p>
+    </section>
+    <section class="card answer" id="shell-missing">
+      <h2>Required property is missing: shell</h2>
+      <h3>Error</h3>
+      <pre class="err"><code>Error: /home/runner/work/shop/shop/./.github/actions/setup/action.yml (Line: 11, Col: 7): Required property is missing: shell</code></pre>
+      <h3>Symptom</h3>
+      <p>Every workflow using a composite action fails.</p>
+      <h3>Cause</h3>
+      <p>A run step in a composite action has no shell; there is no default there.</p>
+      <h3>Confirm</h3>
+      <pre><code>grep -n -B1 -A2 'run:' .github/actions/*/action.yml</code></pre>
+      <h3>Fix</h3>
+      <p>Add <code>shell: bash</code> to each run step in action.yml.</p>
+      <h3>Prevent</h3>
+      <p>Run actionlint on action.yml files too.</p>
+      <p class="note">Practise it: <a href="index.html#play/composite-shell">Required property is missing: shell</a>. Learn it: <a href="index.html#path">Level 09 · Write it once</a>. <a href="index.html#fix/shell-missing">Open in the app</a>.</p>
+    </section>
+    <section class="card answer" id="invalid-secret">
+      <h2>Invalid secret, X is not defined in the referenced workflow</h2>
+      <h3>Error</h3>
+      <pre class="err"><code>Invalid secret, DEPLOY_TOKEN is not defined in the referenced workflow.</code></pre>
+      <h3>Symptom</h3>
+      <p>Calling a reusable workflow fails at once.</p>
+      <h3>Cause</h3>
+      <p>The caller passes a named secret the called workflow does not declare under <code>on.workflow_call.secrets</code>.</p>
+      <h3>Confirm</h3>
+      <pre><code>grep -n -A8 workflow_call .github/workflows/deploy.yml</code></pre>
+      <h3>Fix</h3>
+      <p>Declare the secret in the called workflow, or use <code>secrets: inherit</code>.</p>
+      <h3>Prevent</h3>
+      <p>Document a reusable workflow's inputs and secrets at the top of its file.</p>
+      <p class="note">Practise it: <a href="index.html#play/reusable-secrets">Reusable workflow gets empty secrets</a>. Learn it: <a href="index.html#path">Level 09 · Write it once</a>. <a href="index.html#fix/invalid-secret">Open in the app</a>.</p>
+    </section>
+  </main>
+  <footer class="foot">
+    <div class="wrap foot-base">
+      <p>© 2024–2026 Sandeep Komal Pothu and contributors. Open source under the MIT License.</p>
+      <p class="foot-tm">GitHub® and GitHub Actions are trademarks of GitHub, Inc. This project is independent and not affiliated with GitHub.</p>
+    </div>
+  </footer>
+</body>
+</html>
