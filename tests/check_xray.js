@@ -12,7 +12,7 @@ const root = path.resolve(__dirname, "..");
 global.window = {};
 require(path.join(root, "site/data.js"));
 
-const r = explain(window.QUEST.xrayExample);
+const r = explain(window.TRACK.xrayExample);
 const at = (text) => r.lines.find((l) => l.line.includes(text));
 const warn = (text) => (at(text) || { warns: [] }).warns.join(" ");
 assert.match(warn("pull_request_target:"), /runs with secrets on fork pull requests/);
@@ -44,7 +44,7 @@ assert.match(explain("on: push\njobs:\n  a:\n    runs-on: x\n    steps:\n      -
 
 // This repository's workflows and examples: every line has a note, nearly all known.
 let files = 0, total = 0, unknown = 0;
-for (const f of window.QUEST.xrayFiles) {
+for (const f of window.TRACK.xrayFiles) {
   const res = explain(f.text);
   assert.ok(!res.error, `${f.path}: ${res.error}`);
   files++;

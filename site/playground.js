@@ -35,7 +35,7 @@
 
   // --- brief: story, goal, live checks, hints --------------------------------
   function renderBrief() {
-    const level = window.QUEST.levels.find((l) => l.id === sc.level);
+    const level = window.TRACK.levels.find((l) => l.id === sc.level);
     $("pg-brief").replaceChildren(
       h("div.pg-brief-top", null,
         h("div", null, h("p.tag", null, `${sc.group} · Level ${sc.level}${level ? " · " + level.title : ""}`), h("h3", null, sc.title)),
@@ -128,6 +128,7 @@
   function solve() {
     session.solved = true;
     store.set("solved", [...solvedIds(), sc.id]);
+    document.dispatchEvent(new CustomEvent("dq:solved", { detail: sc.id }));
     renderPicker();
     const b = $("pg-scenarios").querySelector('[aria-pressed="true"]');
     if (b) b.classList.add("just-solved");
@@ -303,7 +304,7 @@
   $("pg-console").addEventListener("submit", (e) => { e.preventDefault(); const v = $("pg-console-input").value; $("pg-console-input").value = ""; consoleRun(v); });
 
   window.AQPlayground = {
-    scenarios: SCENARIOS.map((s) => ({ id: s.id, title: s.title, group: s.group })),
+    scenarios: SCENARIOS.map((s) => ({ id: s.id, title: s.title, group: s.group, story: s.story, level: s.level })),
     load: (id) => load(id, true),
     // From the cheat sheet: open the scenario; gh commands run in its console, snippets are shown to paste.
     prefill: (text, where) => {

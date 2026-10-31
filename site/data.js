@@ -1,7 +1,7 @@
-// Content for the Actions Quest site. Plain data, no logic.
+// Content for the DevOps Nimbus GitHub Actions site. Plain data, no logic.
 "use strict";
 
-window.QUEST = {
+window.TRACK = {
   repo: "https://github.com/SandeepKomal/GitHub-Actions",
   site: "https://sandeepkomal.github.io/GitHub-Actions/",
 
@@ -237,7 +237,7 @@ window.QUEST = {
       prevent: "Fail early with a clear message when a required secret is empty.", level: "06", scenarios: ["fork-secret", "dependabot-secret", "env-secret", "reusable-secrets"] },
     { id: "gh-token", title: "gh needs GH_TOKEN", error: "gh: To use GitHub CLI in a GitHub Actions workflow, set the GH_TOKEN environment variable. Example:\n  env:\n    GH_TOKEN: ${{ github.token }}",
       symptom: "Any gh command fails in a workflow.", cause: "gh does not read the token by itself in Actions.", confirm: ["env | grep GH_TOKEN   # in the step"], fix: "Set `GH_TOKEN: ${{ github.token }}` in the step's env.", prevent: "Use a shared step template for gh calls.", level: "07", scenarios: ["pr-comment", "tag-release"] },
-    { id: "git-push-403", title: "Permission to repo.git denied to github-actions[bot]", error: "remote: Permission to devquest/shop.git denied to github-actions[bot].\nfatal: unable to access 'https://github.com/devquest/shop/': The requested URL returned error: 403",
+    { id: "git-push-403", title: "Permission to repo.git denied to github-actions[bot]", error: "remote: Permission to nimbus/shop.git denied to github-actions[bot].\nfatal: unable to access 'https://github.com/nimbus/shop/': The requested URL returned error: 403",
       symptom: "A step that commits and pushes fails.", cause: "The token has contents: read, or branch protection blocks the push.", confirm: ["gh api repos/<owner>/<repo>/branches/main/protection"], fix: "Grant contents: write to that job only, or open a pull request instead of pushing to a protected branch.",
       prevent: "Prefer pull requests from bots over direct pushes.", level: "07", scenarios: ["write-all"] },
     { id: "token-no-trigger", title: "A push by the workflow starts no other workflow", error: "(no run appears after a commit or tag pushed with the GITHUB_TOKEN)",

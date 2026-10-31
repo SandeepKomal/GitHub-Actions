@@ -732,7 +732,7 @@
             runs-on: ubuntu-latest
             steps:
               - id: meta
-                run: echo "image=ghcr.io/devquest/shop:1.4.\${{ github.run_number }}" >> "$GITHUB_OUTPUT"
+                run: echo "image=ghcr.io/nimbus/shop:1.4.\${{ github.run_number }}" >> "$GITHUB_OUTPUT"
           deploy:
             needs: build
             runs-on: ubuntu-latest
@@ -749,7 +749,7 @@
       world: { secrets: deployToken },
       events: ["push"], verify: ["push"],
       checks: [
-        ["Deploy prints the image name", (v) => /Deploying image: ghcr\.io\/devquest\/shop:1\.4\.\d+/.test(text(v.run(0)))],
+        ["Deploy prints the image name", (v) => /Deploying image: ghcr\.io\/nimbus\/shop:1\.4\.\d+/.test(text(v.run(0)))],
         ["Production is deployed", (v) => deployedTo(v.run(0), "production")]
       ],
       hints: [
@@ -1132,8 +1132,8 @@
             steps:
               - uses: ${checkout}
               - run: echo "\${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u \${{ github.actor }} --password-stdin
-              - run: docker build -t ghcr.io/devquest/shop:\${{ github.sha }} .
-              - run: docker push ghcr.io/devquest/shop:\${{ github.sha }}
+              - run: docker build -t ghcr.io/nimbus/shop:\${{ github.sha }} .
+              - run: docker push ghcr.io/nimbus/shop:\${{ github.sha }}
       ` },
       events: ["push"], verify: ["push"],
       checks: [
@@ -1233,7 +1233,7 @@
                   IMAGE: \${{ needs.build.outputs.image }}
                   DEPLOY_TOKEN: \${{ secrets.DEPLOY_TOKEN }}
       ` },
-      world: { secrets: { ...deployToken, REGISTRY: "registry.devquest.example" }, app: { needsImage: true } },
+      world: { secrets: { ...deployToken, REGISTRY: "registry.nimbus.example" }, app: { needsImage: true } },
       events: ["push"], verify: ["push"],
       checks: [
         ["Production is deployed with an image", (v) => deployedTo(v.run(0), "production")],
@@ -1268,7 +1268,7 @@
               - name: Collect pull request titles
                 run: |
                   for n in $(seq 1 1500); do
-                    gh api "repos/devquest/shop/pulls/$n" --jq .title >> titles.txt
+                    gh api "repos/nimbus/shop/pulls/$n" --jq .title >> titles.txt
                   done
                   echo "Pull requests: $(wc -l < titles.txt)"
                 env:
@@ -1280,7 +1280,7 @@
       hints: [
         "How many API requests does the loop make, and what is the GITHUB_TOKEN's hourly limit?",
         "The GITHUB_TOKEN allows 1,000 REST requests an hour per repository. List endpoints return up to 100 items per request.",
-        "Replace the loop with one paginated call: `gh api \"repos/devquest/shop/pulls?state=all&per_page=100\" --paginate --jq '.[].title' > titles.txt`."
+        "Replace the loop with one paginated call: `gh api \"repos/nimbus/shop/pulls?state=all&per_page=100\" --paginate --jq '.[].title' > titles.txt`."
       ],
       lesson: "Batch API calls: list endpoints with per_page=100 and --paginate, or GraphQL. Sleeping in a loop only makes it slower."
     },
@@ -1611,7 +1611,7 @@
       world: {
         environments: { production: { branches: ["main"] } },
         roles: { "arn:aws:iam::123456789012:role/shop-deploy": { trust: { Version: "2012-10-17", Statement: [{ Effect: "Allow", Principal: { Federated: "arn:aws:iam::123456789012:oidc-provider/token.actions.githubusercontent.com" },
-          Action: "sts:AssumeRoleWithWebIdentity", Condition: { StringEquals: { "token.actions.githubusercontent.com:aud": "sts.amazonaws.com", "token.actions.githubusercontent.com:sub": "repo:devquest/shop:environment:production" } } }] } } }
+          Action: "sts:AssumeRoleWithWebIdentity", Condition: { StringEquals: { "token.actions.githubusercontent.com:aud": "sts.amazonaws.com", "token.actions.githubusercontent.com:sub": "repo:nimbus/shop:environment:production" } } }] } } }
       },
       events: ["push"], verify: ["push"],
       checks: [
@@ -1620,7 +1620,7 @@
       ],
       hints: [
         "Read the first message from configure-aws-credentials: which permission does it ask about?",
-        "OIDC needs `id-token: write`. Then AWS compares the token's sub claim with the role's trust policy, which allows `repo:devquest/shop:environment:production`.",
+        "OIDC needs `id-token: write`. Then AWS compares the token's sub claim with the role's trust policy, which allows `repo:nimbus/shop:environment:production`.",
         "Add `id-token: write` under `permissions:` and `environment: production` to the job."
       ],
       lesson: "OIDC swaps a short-lived GitHub token for cloud credentials. The job needs id-token: write, and its sub claim must match the role's trust policy."
@@ -1905,7 +1905,7 @@
     },
     {
       id: "oidc-trust", group: "Security", level: "10", title: "OIDC trust policy allows any repository",
-      story: "The deploy role trusts repo:devquest/*. Any repository in the organisation, any branch, any pull request can assume production.",
+      story: "The deploy role trusts repo:nimbus/*. Any repository in the organisation, any branch, any pull request can assume production.",
       goal: "Let only this repository's production environment assume the role.",
       files: {
         [CI]: y`
@@ -1930,20 +1930,20 @@
                 - run: aws s3 sync dist s3://shop-site
         `,
         "aws/shop-deploy-trust.json": JSON.stringify({ Version: "2012-10-17", Statement: [{ Effect: "Allow", Principal: { Federated: "arn:aws:iam::123456789012:oidc-provider/token.actions.githubusercontent.com" },
-          Action: "sts:AssumeRoleWithWebIdentity", Condition: { StringEquals: { "token.actions.githubusercontent.com:aud": "sts.amazonaws.com" }, StringLike: { "token.actions.githubusercontent.com:sub": "repo:devquest/*" } } }] }, null, 2) + "\n"
+          Action: "sts:AssumeRoleWithWebIdentity", Condition: { StringEquals: { "token.actions.githubusercontent.com:aud": "sts.amazonaws.com" }, StringLike: { "token.actions.githubusercontent.com:sub": "repo:nimbus/*" } } }] }, null, 2) + "\n"
       },
       world: { trustFile: "aws/shop-deploy-trust.json", environments: { production: { branches: ["main"] } }, roles: { "arn:aws:iam::123456789012:role/shop-deploy": {} } },
       events: ["push"], verify: ["push"],
       checks: [
         ["Production still deploys", (v) => deployedTo(v.run(0), "production")],
-        ["Another repository is refused", (v) => !trustAllows(v.files["aws/shop-deploy-trust.json"], "repo:devquest/sandbox:ref:refs/heads/main", "sts.amazonaws.com")],
-        ["A feature branch is refused", (v) => !trustAllows(v.files["aws/shop-deploy-trust.json"], "repo:devquest/shop:ref:refs/heads/feature/login", "sts.amazonaws.com")],
-        ["A pull request is refused", (v) => !trustAllows(v.files["aws/shop-deploy-trust.json"], "repo:devquest/shop:pull_request", "sts.amazonaws.com")]
+        ["Another repository is refused", (v) => !trustAllows(v.files["aws/shop-deploy-trust.json"], "repo:nimbus/sandbox:ref:refs/heads/main", "sts.amazonaws.com")],
+        ["A feature branch is refused", (v) => !trustAllows(v.files["aws/shop-deploy-trust.json"], "repo:nimbus/shop:ref:refs/heads/feature/login", "sts.amazonaws.com")],
+        ["A pull request is refused", (v) => !trustAllows(v.files["aws/shop-deploy-trust.json"], "repo:nimbus/shop:pull_request", "sts.amazonaws.com")]
       ],
       hints: [
-        "Open the trust policy. What does repo:devquest/* match?",
-        "The sub claim names the repository and the ref, environment or pull_request. This job's is repo:devquest/shop:environment:production.",
-        'Replace the StringLike block with `"StringEquals": { "token.actions.githubusercontent.com:aud": "sts.amazonaws.com", "token.actions.githubusercontent.com:sub": "repo:devquest/shop:environment:production" }`.'
+        "Open the trust policy. What does repo:nimbus/* match?",
+        "The sub claim names the repository and the ref, environment or pull_request. This job's is repo:nimbus/shop:environment:production.",
+        'Replace the StringLike block with `"StringEquals": { "token.actions.githubusercontent.com:aud": "sts.amazonaws.com", "token.actions.githubusercontent.com:sub": "repo:nimbus/shop:environment:production" }`.'
       ],
       lesson: "Trust the narrowest sub claim: one repository and one environment. Wildcards in the sub are how one repository's workflow assumes another's role."
     },

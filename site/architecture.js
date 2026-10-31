@@ -5,7 +5,7 @@
 (function () {
   const { h } = window.AQUI;
   const rich = window.AQUI.rich;
-  const parts = Object.fromEntries(window.QUEST.architecture.components.map((c) => [c.id, c]));
+  const parts = Object.fromEntries(window.TRACK.architecture.components.map((c) => [c.id, c]));
   const NS = "http://www.w3.org/2000/svg";
   const s = (tag, attrs, ...kids) => { const el = document.createElementNS(NS, tag); for (const [k, v] of Object.entries(attrs || {})) el.setAttribute(k, v); el.append(...kids); return el; };
   const still = () => matchMedia("(prefers-reduced-motion: reduce)").matches;

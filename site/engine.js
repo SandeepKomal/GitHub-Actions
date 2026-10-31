@@ -6,7 +6,7 @@
 
 (function (root) {
   const { parse, at } = root.AQYaml;
-  const OWNER = "devquest", REPO = "shop", FULL = `${OWNER}/${REPO}`;
+  const OWNER = "nimbus", REPO = "shop", FULL = `${OWNER}/${REPO}`;
   const WORK = `/home/runner/work/${REPO}/${REPO}`;
   const SCRIPT = "/home/runner/work/_temp/0f3c9b2e.sh";
   const FILES = { output: "/home/runner/work/_temp/_runner_file_commands/set_output", env: "/home/runner/work/_temp/_runner_file_commands/set_env",
@@ -1664,7 +1664,7 @@
     // A called workflow can keep or lower the caller's permissions, never raise them.
     if (opts.call) for (const k of Object.keys(perms)) if (perms[k] !== opts.call.cap[k] && opts.call.cap[k] !== "write") { if (opts.call.cap[k]) perms[k] = opts.call.cap[k]; else delete perms[k]; }
     j.perms = perms;
-    const secrets = { ...jobSecrets(world, ev, envName), GITHUB_TOKEN: `ghs_quest${hash(run.id + id).slice(0, 28)}` };
+    const secrets = { ...jobSecrets(world, ev, envName), GITHUB_TOKEN: `ghs_nimbus${hash(run.id + id).slice(0, 28)}` };
     j.secretsAvailable = Object.keys(secrets).filter((k) => k !== "GITHUB_TOKEN");
     ctx = { ...ctx, github: { ...ctx.github, token: secrets.GITHUB_TOKEN } };
     const sx = {

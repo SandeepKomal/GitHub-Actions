@@ -7,7 +7,7 @@ A practical GitHub Actions learning repository covering CI, testing, security sc
 [![GitHub stars](https://img.shields.io/github/stars/SandeepKomal/GitHub-Actions?style=flat)](https://github.com/SandeepKomal/GitHub-Actions/stargazers)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
-## Actions Quest: the learning site
+## DevOps Nimbus GitHub Actions: zero to on-call, in your browser
 
 **[sandeepkomal.github.io/GitHub-Actions](https://sandeepkomal.github.io/GitHub-Actions/)** teaches GitHub Actions by fixing broken pipelines, in the browser, with no account:
 
@@ -56,7 +56,7 @@ examples/
 src/
 └── addition.py            # Small pytest example
 
-site/                      # The Actions Quest learning site (static)
+site/                      # The DevOps Nimbus GitHub Actions learning site (static)
 tests/                     # Node tests and the fuzzer for the site
 tools/build-problems.js    # Builds site/problems.html
 requirements-dev.txt       # Test dependencies, also the pip cache key

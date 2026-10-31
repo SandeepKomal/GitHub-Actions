@@ -5,26 +5,27 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'none'; base-uri 'none'; form-action 'none'">
   <meta name="description" content="Learn GitHub Actions by fixing broken pipelines: a workflow simulator with 56 real incidents, a Workflow X-ray, quizzes, a troubleshooting reference for every common error, and a cheat sheet. Free, no account.">
-  <meta property="og:title" content="Actions Quest: learn GitHub Actions by fixing broken pipelines">
+  <meta property="og:site_name" content="DevOps Nimbus">
+  <meta property="og:title" content="GitHub Actions, zero to on-call · DevOps Nimbus">
   <meta property="og:description" content="A workflow simulator with real incidents and real error messages, a Workflow X-ray and a troubleshooting reference. Free and open source.">
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://sandeepkomal.github.io/GitHub-Actions/">
   <link rel="canonical" href="https://sandeepkomal.github.io/GitHub-Actions/">
-  <title>Actions Quest</title>
+  <title>GitHub Actions · DevOps Nimbus</title>
   <link rel="stylesheet" href="style.css">
-  <link rel="icon" href="logo.svg" type="image/svg+xml">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
 </head>
 <body>
   <a class="skip" href="#main">Skip to content</a>
   <header class="top">
     <div class="wrap top-inner">
-      <a class="brand" href="#path" aria-label="Actions Quest home"><img src="logo.svg" alt="" width="22" height="22">Actions Quest</a>
+      <a class="brand" href="#path" aria-label="DevOps Nimbus GitHub Actions, home"><img class="mark" src="nimbus.svg" alt="" width="37" height="22">DevOps Nimbus <span class="brand-track">GitHub Actions</span></a>
       <nav aria-label="Sections">
         <div class="mode learn" role="group" aria-label="Learn">
           <span class="mode-k">Learn</span>
           <a href="#path" data-tab="path">Path</a>
           <a href="#quiz" data-tab="quiz">Quiz</a>
-          <a href="#xray" data-tab="xray">Workflow X-ray</a>
+          <a href="#xray" data-tab="xray">X-ray</a>
           <a href="#arch" data-tab="arch">How a run works</a>
         </div>
         <div class="mode fix" role="group" aria-label="Fix">
@@ -34,7 +35,6 @@
         </div>
       </nav>
       <button type="button" class="kbd-btn" id="palette-open" aria-label="Search the site (Ctrl+K)"><span>Search</span><kbd id="palette-key">Ctrl K</kbd></button>
-      <a class="gh" data-repo="" href="#">GitHub</a>
     </div>
   </header>
 
@@ -42,7 +42,7 @@
     <section id="tab-path" class="tab">
       <header class="hero">
         <div class="wrap">
-          <p class="eyebrow">Actions Quest</p>
+          <p class="eyebrow"><img class="eyebrow-logo" src="logo.svg" alt="" width="20" height="20">GitHub Actions · zero to on-call</p>
           <h1>Pipelines you<br>can trust.</h1>
           <p class="sub">Workflows, caching, secrets and environments, learned by fixing pipelines that break, from the first build to safe deploys.</p>
           <div class="doors">
@@ -67,6 +67,7 @@
           </div>
           <div class="stage" id="stage"></div>
           <div class="stats" id="stats"></div>
+          <section class="engage" id="engage" aria-label="Your learning"></section>
         </div>
       </header>
 
@@ -237,7 +238,7 @@ gh run watch</code></pre>
   <footer class="foot">
     <div class="wrap foot-grid">
       <div class="foot-brand">
-        <a class="brand" href="#path"><img src="logo.svg" alt="" width="28" height="28">Actions Quest</a>
+        <a class="brand" href="#path"><img class="mark" src="nimbus.svg" alt="" width="47" height="28">DevOps Nimbus <span class="brand-track">GitHub Actions</span></a>
         <p>Learn GitHub Actions by fixing broken pipelines: a simulator, levels, quizzes and references, free for everyone.</p>
         <a class="pill small-pill" data-repo="" href="#">GitHub source code</a>
       </div>
@@ -253,6 +254,7 @@ gh run watch</code></pre>
       </nav>
       <nav class="foot-col" aria-label="Project">
         <h2>Project</h2>
+        <a href="https://sandeepkomal.github.io/devops-nimbus/">All DevOps Nimbus tracks</a>
         <a data-repo="#quick-start" href="#">Get started</a>
         <a data-repo="/blob/main/CONTRIBUTING.md" href="#">Contributing</a>
         <a data-repo="/issues/new" href="#">Report an issue</a>
@@ -262,7 +264,7 @@ gh run watch</code></pre>
     <div class="wrap foot-base">
       <p>© 2024–2026 Sandeep Komal Pothu and contributors.</p>
       <p>Open source under the MIT License. Built with no trackers, no cookies and nothing loaded from other sites.</p>
-      <p>Your progress (levels, quiz scores, solved scenarios, playground edits) stays in this browser and is never sent anywhere. <button type="button" class="link-btn" id="forget">Clear it</button></p>
+      <p>Your progress (levels, quiz scores, solved scenarios, score, activity days, playground edits) stays in this browser and is never sent anywhere. <button type="button" class="link-btn" id="forget">Clear it</button></p>
       <p class="foot-tm">GitHub® and GitHub Actions are trademarks of GitHub, Inc. This project is independent and not affiliated with GitHub.</p>
     </div>
   </footer>
@@ -282,5 +284,6 @@ gh run watch</code></pre>
   <script src="playground.js"></script>
   <script src="xray.js"></script>
   <script src="architecture.js"></script>
+  <script src="engage.js"></script>
 </body>
 </html>

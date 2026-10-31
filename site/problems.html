@@ -5,19 +5,19 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'none'; base-uri 'none'; form-action 'none'">
   <meta name="description" content="GitHub Actions errors and how to fix them: 45 error messages, each with the cause, how to confirm it, the fix and how to prevent it.">
-  <meta property="og:title" content="GitHub Actions errors and fixes · Actions Quest">
+  <meta property="og:title" content="GitHub Actions errors and fixes · DevOps Nimbus">
   <meta property="og:description" content="Every common GitHub Actions error message, with cause, confirmation, fix and prevention.">
   <meta property="og:type" content="article">
   <meta property="og:url" content="https://sandeepkomal.github.io/GitHub-Actions/problems.html">
   <link rel="canonical" href="https://sandeepkomal.github.io/GitHub-Actions/problems.html">
   <title>GitHub Actions errors and fixes</title>
   <link rel="stylesheet" href="style.css">
-  <link rel="icon" href="logo.svg" type="image/svg+xml">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
 </head>
 <body class="problems">
   <header class="top">
     <div class="wrap top-inner">
-      <a class="brand" href="index.html"><img src="logo.svg" alt="" width="22" height="22">Actions Quest</a>
+      <a class="brand" href="index.html"><img class="mark" src="nimbus.svg" alt="" width="37" height="22">DevOps Nimbus <span class="brand-track">GitHub Actions</span></a>
       <nav aria-label="Sections"><a href="index.html#doctor">Search errors</a><a href="index.html#playground">Playground</a></nav>
     </div>
   </header>
@@ -439,8 +439,8 @@ gh secret list --app dependabot</code></pre>
     <section class="card answer" id="git-push-403">
       <h2>Permission to repo.git denied to github-actions[bot]</h2>
       <h3>Error</h3>
-      <pre class="err"><code>remote: Permission to devquest/shop.git denied to github-actions[bot].
-fatal: unable to access 'https://github.com/devquest/shop/': The requested URL returned error: 403</code></pre>
+      <pre class="err"><code>remote: Permission to nimbus/shop.git denied to github-actions[bot].
+fatal: unable to access 'https://github.com/nimbus/shop/': The requested URL returned error: 403</code></pre>
       <h3>Symptom</h3>
       <p>A step that commits and pushes fails.</p>
       <h3>Why it happens</h3>
