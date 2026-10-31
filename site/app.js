@@ -393,7 +393,7 @@
       { label: "Workflow X-ray", kind: "Section", run: () => go("xray") },
       { label: "Troubleshoot: search an error", kind: "Section", run: () => go("doctor", () => $("#doctor-q").focus()) },
       { label: "Cheat sheet", kind: "Section", run: () => go("cheats", () => $("#cheat-q").focus()) },
-      { label: "Actions architecture", kind: "Section", run: () => go("arch") },
+      { label: "How a run works", kind: "Section", run: () => go("arch") },
       ...Q.levels.map((lv) => ({ label: `Quiz: ${lv.id} · ${lv.topic}`, kind: "Quiz", run: () => go("quiz", () => { $("#quiz-level").value = lv.id; renderQuiz(); }) })),
       ...Q.doctor.map((d) => ({ label: `Troubleshoot: ${d.title}`, hint: d.error, kind: "Reference", run: () => go("fix/" + d.id) })),
       ...(window.AQPlayground ? window.AQPlayground.scenarios : []).map((s) => ({ label: `Playground: ${s.title}`, hint: s.group, kind: "Practice", run: () => go("play/" + s.id) }))
