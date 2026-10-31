@@ -323,12 +323,16 @@
       h("div.answer-head", null, h("h3", null, d.title), h("button.chip", { type: "button", onclick: (e) => copyLink("fix/" + d.id, e.currentTarget) }, "Copy link")),
       h("h4", null, "Error"), h("pre.err", null, h("code", null, d.error)),
       h("h4", null, "Symptom"), h("p", null, ...rich(d.symptom)),
-      h("h4", null, "Cause"), h("p", null, ...rich(d.cause)),
+      h("h4", null, "Why it happens"), h("p", null, ...rich(d.cause)),
       h("h4", null, "Confirm"), h("pre", null, h("code", null, d.confirm.join("\n"))),
       h("h4", null, "Fix"), h("p", null, ...rich(d.fix)),
       h("h4", null, "Prevent"), h("p", null, ...rich(d.prevent)),
-      d.scenarios.length ? h("div.doctor-practise", null, h("span.muted.small", null, "Practise it:"), d.scenarios.filter((id) => titles[id]).map((id) => h("a.chip", { href: "#play/" + id }, titles[id]))) : null,
-      lv ? h("p.note", null, "Learn it: ", h("a", { href: "#path", onclick: () => setTimeout(() => scrollToEl($("#levels")), 0) }, `Level ${lv.id} · ${lv.title}`)) : null));
+      // Fixing is the way in; the point is to learn it, so every answer ends in practice.
+      h("div.learn-it", null,
+        h("h4", null, "Now learn it"),
+        h("p", null, "Break this yourself in a safe playground and fix it. Doing it once is what makes you recognise it next time."),
+        d.scenarios.length ? h("div.doctor-practise", null, h("span.muted.small", null, "Practise:"), d.scenarios.filter((id) => titles[id]).map((id) => h("a.chip", { href: "#play/" + id }, titles[id]))) : null,
+        lv ? h("p.note", null, "Then the level that teaches it: ", h("a", { href: "#path", onclick: () => setTimeout(() => scrollToEl($("#levels")), 0) }, `Level ${lv.id} · ${lv.title}`)) : null)));
     if (!quiet || location.hash.startsWith("#fix/")) setTimeout(() => scrollToEl($("#doctor-out")), 0);
   }
 
@@ -391,7 +395,7 @@
       { label: "Your path", kind: "Section", run: () => go("path", () => scrollToEl($("#path-title"))) },
       { label: "Exam: random questions from every level", kind: "Quiz", run: () => go("quiz", () => { $("#quiz-level").value = "exam"; renderQuiz(); }) },
       { label: "Workflow X-ray", kind: "Section", run: () => go("xray") },
-      { label: "Troubleshoot: search an error", kind: "Section", run: () => go("doctor", () => $("#doctor-q").focus()) },
+      { label: "Fix: troubleshoot an error", kind: "Section", run: () => go("doctor", () => $("#doctor-q").focus()) },
       { label: "Cheat sheet", kind: "Section", run: () => go("cheats", () => $("#cheat-q").focus()) },
       { label: "How a run works", kind: "Section", run: () => go("arch") },
       ...Q.levels.map((lv) => ({ label: `Quiz: ${lv.id} · ${lv.topic}`, kind: "Quiz", run: () => go("quiz", () => { $("#quiz-level").value = lv.id; renderQuiz(); }) })),
@@ -444,6 +448,10 @@
   $("#xray-edit-btn").addEventListener("click", () => { editXray(); $("#xray-input").focus(); });
   buildDoctorList();
   $("#doctor-q").addEventListener("input", renderDoctorList);
+  // The home page's "Something broken?" box hands the pasted error to Troubleshoot.
+  const doorGo = () => { $("#doctor-q").value = $("#door-q").value; go("doctor", () => { renderDoctorList(); $("#doctor-q").focus(); }); };
+  $("#door-go").addEventListener("click", doorGo);
+  $("#door-q").addEventListener("keydown", (e) => { if (e.key === "Enter") doorGo(); });
   $("#cheat-q").addEventListener("input", renderCheats);
   $("#forget").addEventListener("click", forgetEverything);
   signature();

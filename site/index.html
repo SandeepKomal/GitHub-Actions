@@ -20,12 +20,18 @@
     <div class="wrap top-inner">
       <a class="brand" href="#path" aria-label="Actions Quest home"><img src="logo.svg" alt="" width="22" height="22">Actions Quest</a>
       <nav aria-label="Sections">
-        <a href="#path" data-tab="path">Path</a>
-        <a href="#quiz" data-tab="quiz">Quiz</a>
-        <a href="#xray" data-tab="xray">Workflow X-ray</a>
-        <a href="#doctor" data-tab="doctor">Troubleshoot</a>
-        <a href="#cheats" data-tab="cheats">Cheat sheet</a>
-        <a href="#arch" data-tab="arch">How a run works</a>
+        <div class="mode learn" role="group" aria-label="Learn">
+          <span class="mode-k">Learn</span>
+          <a href="#path" data-tab="path">Path</a>
+          <a href="#quiz" data-tab="quiz">Quiz</a>
+          <a href="#xray" data-tab="xray">Workflow X-ray</a>
+          <a href="#arch" data-tab="arch">How a run works</a>
+        </div>
+        <div class="mode fix" role="group" aria-label="Fix">
+          <span class="mode-k">Fix</span>
+          <a href="#doctor" data-tab="doctor">Troubleshoot</a>
+          <a href="#cheats" data-tab="cheats">Cheat sheet</a>
+        </div>
       </nav>
       <button type="button" class="kbd-btn" id="palette-open" aria-label="Search the site (Ctrl+K)"><span>Search</span><kbd id="palette-key">Ctrl K</kbd></button>
       <a class="gh" data-repo="" href="#">GitHub</a>
@@ -39,9 +45,25 @@
           <p class="eyebrow">Actions Quest</p>
           <h1>Pipelines you<br>can trust.</h1>
           <p class="sub">Workflows, caching, secrets and environments, learned by fixing pipelines that break, from the first build to safe deploys.</p>
-          <div class="ctas">
-            <a class="pill primary" href="#path-title">Start the path</a>
-            <a class="link" href="#playground">Try a scenario</a>
+          <div class="doors">
+            <div class="door learn">
+              <p class="door-k">Learning GitHub Actions?</p>
+              <h2>Start from zero, step by step.</h2>
+              <p>Levels in order, each with a broken pipeline to fix in your browser.</p>
+              <div class="ctas">
+                <a class="pill primary" href="#path-title">Start the path</a>
+                <a class="link" href="#playground">Try a scenario</a>
+              </div>
+            </div>
+            <div class="door fix">
+              <p class="door-k">Something broken right now?</p>
+              <h2>Paste the error, get the fix.</h2>
+              <p>The cause, the commands to confirm it and the fix, for every common Actions error.</p>
+              <div class="door-search">
+                <input id="door-q" type="search" placeholder="Paste the error here" aria-label="Paste an error" autocomplete="off" spellcheck="false">
+                <button type="button" class="pill" id="door-go">Find the fix</button>
+              </div>
+            </div>
           </div>
           <div class="stage" id="stage"></div>
           <div class="stats" id="stats"></div>
@@ -54,9 +76,9 @@
           <div class="bento">
             <a class="tile wide" href="#playground"><div><div class="k">Playground</div><h3>Run workflows here.</h3></div><p>Empty secrets, cache misses, permissions denied, deploys that race. Edit the YAML, send an event, read the run.</p></a>
             <a class="tile wide" href="#xray"><div><div class="k">Workflow X-ray</div><h3>Every key, explained.</h3></div><p>Triggers, permissions and matrices, and every risky pattern: injection, unpinned actions, pwn requests.</p></a>
-            <a class="tile" href="#doctor"><div><div class="k">Troubleshoot</div><h3>Paste the error.</h3></div><p>Cause, how to confirm, fix and prevent.</p></a>
             <a class="tile" href="#quiz"><div><div class="k">Quiz</div><h3>Know why, not just how.</h3></div><p>Every answer explained.</p></a>
             <a class="tile" href="#arch"><div><div class="k">How a run works</div><h3>From event to deploy.</h3></div><p>Each part, and how it fails.</p></a>
+            <a class="tile" href="#doctor"><div><div class="k">Stuck on an error?</div><h3>Learn why it happens, then practise the fix.</h3></div></a>
           </div>
         </section>
 
@@ -182,8 +204,9 @@ gh run watch</code></pre>
     </section>
 
     <section id="tab-doctor" class="tab wrap" hidden>
-      <h2>Troubleshoot</h2>
-      <p class="lede">Paste the error from your run, or pick a symptom. Each answer has the exact error, the cause, how to confirm it, the fix, how to prevent it, and a scenario to practise on.</p>
+      <p class="mode-banner"><strong>Fix mode.</strong> For when something is broken right now. Learning GitHub Actions instead? <a href="#path">Start the path</a>.</p>
+      <h2>Stuck on an error?</h2>
+      <p class="lede">Paste the error from your run, or pick a symptom. Each answer explains why it happens, how to confirm it and how to fix and prevent it, then gives you a safe scenario to break and fix it yourself, so you recognise it next time.</p>
       <div class="guide-slot" data-guide="doctor"></div>
       <label class="field wide-field">Search errors and symptoms
         <input id="doctor-q" type="search" placeholder="Paste an error: Resource not accessible by integration" autocomplete="off">

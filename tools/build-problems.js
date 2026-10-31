@@ -35,7 +35,7 @@ function build() {
       <pre class="err"><code>${esc(d.error)}</code></pre>
       <h3>Symptom</h3>
       <p>${text(d.symptom)}</p>
-      <h3>Cause</h3>
+      <h3>Why it happens</h3>
       <p>${text(d.cause)}</p>
       <h3>Confirm</h3>
       <pre><code>${esc(d.confirm.join("\n"))}</code></pre>
@@ -43,7 +43,7 @@ function build() {
       <p>${text(d.fix)}</p>
       <h3>Prevent</h3>
       <p>${text(d.prevent)}</p>
-      <p class="note">${practise ? `Practise it: ${practise}. ` : ""}Learn it: <a href="index.html#path">Level ${lv.id} · ${esc(lv.title)}</a>. <a href="index.html#fix/${d.id}">Open in the app</a>.</p>
+      <p class="note"><strong>Now learn it:</strong> ${practise ? `break and fix it yourself in ${practise}, then take` : "take"} <a href="index.html#path">Level ${lv.id} · ${esc(lv.title)}</a>. <a href="index.html#fix/${d.id}">Open in the app</a>.</p>
     </section>`;
   }).join("\n");
   return `<!doctype html>
@@ -71,7 +71,7 @@ function build() {
   </header>
   <main class="wrap">
     <h1 class="problems-title">GitHub Actions errors and fixes</h1>
-    <p class="lede">${Q.doctor.length} error messages from real runs. Each has the exact text, the cause, how to confirm it, the fix, how to prevent it, and a scenario to practise on in the <a href="index.html#playground">playground</a>.</p>
+    <p class="lede">${Q.doctor.length} error messages from real runs. Each has the exact text, why it happens, how to confirm it, the fix and how to prevent it. Then learn it for good: break and fix each one yourself in the <a href="index.html#playground">playground</a>.</p>
     <nav class="toc card" aria-label="Problems">
 ${toc}
     </nav>
