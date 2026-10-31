@@ -61,7 +61,11 @@
     }
     current = tab;
     for (const t of tabs) $("#tab-" + t).hidden = t !== tab;
-    document.querySelectorAll(".top nav a").forEach((a) => (a.dataset.tab === tab ? a.setAttribute("aria-current", "page") : a.removeAttribute("aria-current")));
+    const fixTabs = [...document.querySelectorAll(".mode.fix a[data-tab]")].map((a) => a.dataset.tab);
+    const mode = fixTabs.includes(tab) ? "fix" : "learn";
+    document.documentElement.dataset.mode = mode;
+    document.querySelectorAll(".sw").forEach((a) => (a.classList.contains(mode) ? a.setAttribute("aria-current", "true") : a.removeAttribute("aria-current")));
+    document.querySelectorAll(".subnav a").forEach((a) => (a.dataset.tab === tab ? a.setAttribute("aria-current", "page") : a.removeAttribute("aria-current")));
     if (want === "play" && sub && window.AQPlayground) window.AQPlayground.load(sub);
     if (want === "fix" && sub) { const i = Q.doctor.findIndex((d) => d.id === sub); if (i >= 0) renderDoctor(i, true); }
     return { want, sub };
