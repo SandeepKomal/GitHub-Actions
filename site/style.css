@@ -8,12 +8,12 @@
   --muted: #6e6e73;
   --line: #d2d2d7;
   --hair: rgba(0, 0, 0, .08);
-  --a: #b0287a;
-  --a2: #ff7ac6;
-  --accent-hover: #971f68;
-  --accent-soft: #f9e9f2;
+  --a: #1d1d1f;
+  --accent-hover: #000000;
+  --accent-2: #1d1d1f;
+  --stage-accent: #f5f5f7; /* the dark stage keeps the dark-mode accent */
+  --accent-soft: #eeeef1;
   --on-accent: #ffffff;
-  --tint: color-mix(in srgb, #b0287a 7%, #fbfbfd);
   --ok: #1d8a3a;
   --ok-soft: #e9f6ec;
   --bad: #d70015;
@@ -42,11 +42,11 @@
     --muted: #a1a1a6;
     --line: #424245;
     --hair: rgba(255, 255, 255, .1);
-    --a: #ff7ac6;
-    --accent-hover: #ff9ad4;
-    --accent-soft: #3a1630;
+    --a: #f5f5f7;
+    --accent-hover: #ffffff;
+    --accent-2: #f5f5f7;
+    --accent-soft: #434345;
     --on-accent: #000000;
-    --tint: #000000;
     --ok: #30d158;
     --ok-soft: #0f2e18;
     --bad: #ff6961;
@@ -109,8 +109,8 @@ kbd { font: 500 .72rem/1 var(--mono); color: var(--muted); background: var(--sur
 main { padding-bottom: 64px; min-height: 70vh; }
 .tab > h2 { font-size: clamp(2rem, 4.5vw, 3rem); font-weight: 700; margin: 48px 0 14px; }
 
-/* Hero: centred, with a soft tint of the accent at the top. */
-.hero { text-align: center; padding: 88px 0 24px; background: linear-gradient(180deg, var(--tint), var(--bg) 70%); }
+/* Hero: centred, on the plain page. */
+.hero { text-align: center; padding: 88px 0 24px; }
 .eyebrow { color: var(--a); font-weight: 600; font-size: 1.1rem; margin: 0 0 6px; }
 .hero h1 { font-size: clamp(2.75rem, 7vw, 5rem); line-height: 1.04; letter-spacing: -.045em; font-weight: 700; margin: 0 0 18px; }
 .hero .sub { font-size: clamp(1.15rem, 2.2vw, 1.5rem); color: var(--muted); line-height: 1.35; max-width: 660px; margin: 0 auto 30px; }
@@ -144,21 +144,21 @@ main { padding-bottom: 64px; min-height: 70vh; }
 /* The stage: the pipeline signature, dark and lit by the accent. */
 .stage { position: relative; text-align: left; margin: 56px auto 0; max-width: 960px; background: var(--stage); color: var(--stage-text); border-radius: 30px; padding: 30px; overflow: hidden; isolation: isolate;
   box-shadow: 0 30px 80px -30px color-mix(in srgb, var(--a) 45%, transparent); }
-.stage::before { content: ""; position: absolute; inset: -40% -10% auto; height: 120%; background: radial-gradient(closest-side, color-mix(in srgb, var(--a2) 28%, transparent), transparent 70%); z-index: -1; pointer-events: none; }
+.stage::before { content: ""; position: absolute; inset: -40% -10% auto; height: 120%; background: radial-gradient(closest-side, color-mix(in srgb, var(--stage-accent) 28%, transparent), transparent 70%); z-index: -1; pointer-events: none; }
 .stage-bar { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 20px; font-size: 13px; color: var(--stage-muted); }
 .stage-bar strong { color: var(--stage-text); font-weight: 600; font-size: 15px; }
 .stage-controls { display: flex; gap: 8px; flex-wrap: wrap; }
 .toggle { border: 1px solid var(--stage-line); background: rgba(255, 255, 255, .06); color: var(--stage-text); border-radius: 99px; padding: 7px 14px; font-size: 13px; cursor: pointer; transition: background .2s, border-color .2s; }
-.toggle:hover, .toggle[aria-pressed="true"] { border-color: var(--a2); background: color-mix(in srgb, var(--a2) 18%, transparent); }
+.toggle:hover, .toggle[aria-pressed="true"] { border-color: var(--stage-accent); background: color-mix(in srgb, var(--stage-accent) 18%, transparent); }
 .toggle:disabled { opacity: .6; cursor: default; }
 .pipe { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
 .job-card { border: 1px solid var(--stage-line); border-radius: 14px; padding: 14px; transition: border-color .3s; }
 .job-card b { display: block; font-size: 14px; }
 .job-card .t { font-size: 12px; color: var(--stage-muted); }
-.job-card.run { border-color: var(--a2); }
+.job-card.run { border-color: var(--stage-accent); }
 .job-card.done { border-color: color-mix(in srgb, #30d158 60%, transparent); }
 .jbar { height: 4px; border-radius: 99px; background: rgba(255, 255, 255, .08); margin-top: 10px; overflow: hidden; }
-.jbar i { display: block; height: 100%; width: 0; background: var(--a2); }
+.jbar i { display: block; height: 100%; width: 0; background: var(--stage-accent); }
 .job-card.done .jbar i { background: #30d158; }
 .meter { margin-top: 16px; display: flex; justify-content: space-between; font-size: 15px; font-family: var(--mono); }
 
@@ -622,12 +622,12 @@ pre.start .cm { color: var(--muted); }
 .eng-uptime { display: flex; gap: 2px; height: 96px; margin-top: 14px; }
 .eng-30 { display: none; }
 .eng-up { flex: 1; border-radius: 2px; background: var(--code-bg); }
-.eng-up.on { background: var(--ok); }
+.eng-up.on { background: var(--accent-2); }
 .eng-up-axis { display: flex; justify-content: space-between; font-size: .75rem; color: var(--muted); }
 .eng-budget { display: flex; align-items: center; gap: 10px; margin-top: auto; padding-top: 10px; font-size: .88rem; }
 .eng-pips { display: flex; gap: 4px; }
-.eng-pips span { width: 10px; height: 10px; border-radius: 50%; border: 1.5px solid var(--ok); }
-.eng-pips span.on { background: var(--ok); }
+.eng-pips span { width: 10px; height: 10px; border-radius: 50%; border: 1.5px solid var(--accent-2); }
+.eng-pips span.on { background: var(--accent-2); }
 .eng-stats { display: grid; grid-template-columns: repeat(5, 1fr); gap: 1px; background: var(--hair); border-radius: 14px; overflow: hidden; border: 1px solid var(--hair); }
 .eng-stats div { background: var(--surface); padding: 14px 16px; display: flex; flex-direction: column; }
 .eng-stats b { font-size: 1.3rem; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }

@@ -1,8 +1,8 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="GitHub Actions">
-  <rect width="32" height="32" rx="8" fill="#b0287a"/>
+  <rect width="32" height="32" rx="8" fill="#1d1d1f"/>
   <path d="M8 16h16" stroke="#fff" stroke-width="2" stroke-linecap="round" opacity=".55"/>
   <circle cx="8" cy="16" r="3.2" fill="#fff"/>
   <circle cx="16" cy="16" r="3.2" fill="#fff"/>
   <circle cx="24" cy="16" r="4.6" fill="#fff"/>
-  <path d="M22 16.1l1.5 1.5 2.7-3" fill="none" stroke="#b0287a" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M22 16.1l1.5 1.5 2.7-3" fill="none" stroke="#1d1d1f" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>
