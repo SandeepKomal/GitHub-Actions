@@ -53,6 +53,7 @@ node tests/fuzz_playground.js    # thousands of malformed inputs, zero exception
 node tests/check_site_data.js    # quiz, Troubleshoot, cheat sheet, problems page in sync
 node tests/check_xray.js
 node tools/build-problems.js     # after changing the Troubleshoot data
+node tools/build-scenario-index.js  # after adding or renaming a scenario or quiz question
 ```
 
 ## What's in this repository
@@ -153,6 +154,7 @@ src/
 site/                      # The DevOps Nimbus GitHub Actions learning site (static)
 tests/                     # Node tests and the fuzzer for the site
 tools/build-problems.js    # Builds site/problems.html
+tools/build-scenario-index.js  # Builds site/scenario-index.js, the scenario index the first screen reads
 requirements-dev.txt       # Test dependencies, also the pip cache key
 README.md
 ```
