@@ -173,7 +173,7 @@ To report a vulnerability, do not post exploit details in a public issue; contac
 
 ## Privacy and cost
 
-The learning site runs entirely in your browser: no accounts, cookies, trackers or database. Your progress stays in your browser unless you download it. The site is free and hosted on GitHub Pages, and the workflows here run on GitHub-hosted runners within GitHub's free minutes for public repositories.
+The learning site runs entirely in your browser: no accounts, cookies, trackers or database. Your progress stays in your browser unless you download it. The site is free and hosted on GitHub Pages, and the workflows here run on GitHub-hosted runners within GitHub's free minutes for public repositories. See [PRIVACY.md](PRIVACY.md) for the full privacy policy.
 
 ## License and trademarks
 
