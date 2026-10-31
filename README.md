@@ -7,6 +7,7 @@
 [![Pages](https://github.com/SandeepKomal/GitHub-Actions/actions/workflows/pages.yml/badge.svg)](https://github.com/SandeepKomal/GitHub-Actions/actions/workflows/pages.yml)
 [![GitHub Actions](https://img.shields.io/badge/GitHub%20Actions-CI%2FCD-2088FF?logo=githubactions&logoColor=white)](https://docs.github.com/en/actions)
 [![Security](https://img.shields.io/badge/security-CodeQL%20%C2%B7%20Dependabot-2ea44f)](https://github.com/SandeepKomal/GitHub-Actions/actions/workflows/security.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 ![No trackers](https://img.shields.io/badge/site-no%20trackers%20%C2%B7%20no%20cookies-2ea44f)
 [![Contributions welcome](https://img.shields.io/badge/contributions-welcome-brightgreen)](CONTRIBUTING.md)
 ![Last commit](https://img.shields.io/github/last-commit/SandeepKomal/GitHub-Actions)
@@ -168,7 +169,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md). Before opening a pull request, run the s
 
 ## Security
 
-To report a vulnerability, do not post exploit details in a public issue; contact the repository owner privately through GitHub. Pushes to `main`, pull requests and a weekly schedule run CodeQL ([security.yml](.github/workflows/security.yml)), and Dependabot keeps the pinned actions up to date ([dependabot.yml](.github/dependabot.yml)).
+To report a vulnerability, do not post exploit details in a public issue; contact the repository owner privately through GitHub. Pushes to `main`, pull requests and a weekly schedule run CodeQL ([security.yml](.github/workflows/security.yml)), and Dependabot keeps the pinned actions up to date ([dependabot.yml](.github/dependabot.yml)). See [SECURITY.md](SECURITY.md).
 
 ## Privacy and cost
 
@@ -176,7 +177,7 @@ The learning site runs entirely in your browser: no accounts, cookies, trackers 
 
 ## License and trademarks
 
-This repository does not include a license file yet.
+MIT, see [LICENSE](LICENSE).
 
 GitHub® and GitHub Actions are trademarks of GitHub, Inc. This project is independent and not affiliated with GitHub.
 
