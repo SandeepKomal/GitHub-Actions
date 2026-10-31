@@ -555,7 +555,7 @@ pre.start .cm { color: var(--muted); }
 .toc h2 { font-size: .9rem; margin: 0 0 6px; break-after: avoid; }
 .toc ul { margin: 0 0 14px; padding-left: 18px; font-size: .9rem; }
 .problems .answer { margin-bottom: 18px; scroll-margin-top: 72px; }
-.problems .answer h2 { margin: 0; font-size: 1.35rem; }
+.problems .answer h2 { margin: 0; font-size: 1.35rem; overflow-wrap: anywhere; }
 .problems .answer h3 { margin: 18px 0 6px; font-size: .82rem; color: var(--muted); letter-spacing: 0; }
 .problems .top nav { justify-content: flex-end; }
 @media (prefers-color-scheme: dark) {
