@@ -478,4 +478,8 @@ scenario("rate-limit", [paged], [
 assert.ok(solved("rate-limit", [[paged[0], "          gh pr list --state all --limit 1500 --json title --jq '.[].title' > titles.txt\n"]]), "gh pr list (GraphQL) also works");
 
 for (const s of SCENARIOS) assert.ok(tested.has(s.id), `${s.id}: needs a fix and wrong moves in this test`);
+// The first screen reads the scenario index, so it must match the scenarios.
+const index = require(path.resolve(__dirname, "../tools/build-scenario-index.js"));
+assert.strictEqual(require("fs").readFileSync(index.file, "utf8"), index.render(), "site/scenario-index.js is out of date: run node tools/build-scenario-index.js");
+
 console.log(`playground ok: ${SCENARIOS.length} scenarios, each with a fix and wrong moves`);

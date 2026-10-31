@@ -43,7 +43,37 @@
     setTimeout(() => { button.textContent = "Copy link"; }, 1400);
   }
   const practise = (id) => { location.hash = "play/" + id; };
-  window.AQUI = { h, rich, store, copyLink, practise };
+
+  // The first screen needs only data.js, scenario-index.js (a small index of the
+  // playground's incidents), this file and engage.js. The rest loads in the
+  // background after the first paint, or at once when something needs it.
+  const LAZY = { quiz: ["quiz-bank.js"], xray: ["yaml.js", "xray.js"], play: ["yaml.js", "engine.js", "scenarios.js", "playground.js"], arch: ["architecture.js"] };
+  const loading = {};
+  function loadScript(src) {
+    if (!loading[src]) {
+      loading[src] = new Promise((resolve, reject) => {
+        const el = document.createElement("script");
+        el.src = src;
+        el.async = false; // run in the order they were added
+        el.onload = resolve;
+        el.onerror = () => { delete loading[src]; el.remove(); reject(new Error("Could not load " + src)); };
+        document.body.append(el);
+      });
+    }
+    return loading[src];
+  }
+  const load = (srcs) => Promise.all(srcs.map(loadScript));
+  // What to draw once a feature's scripts have run (set further down).
+  const ready = {};
+  const needed = {};
+  const need = (what) => (needed[what] = needed[what] || load(LAZY[what]).then(() => { if (ready[what]) ready[what](); }, (e) => { delete needed[what]; throw e; }));
+  const warm = () => Promise.all(Object.keys(LAZY).map(need));
+  const SCENARIOS = window.TRACK_SCENARIOS || [];
+  const scenarioTitles = () => Object.fromEntries(SCENARIOS.map((x) => [x.id, x.title]));
+  // Run something in the playground once it has loaded.
+  const withPg = (fn) => (window.AQPlayground ? fn(window.AQPlayground) : need("play").then(() => fn(window.AQPlayground)));
+
+  window.AQUI = { h, rich, store, copyLink, practise, need };
 
   document.querySelectorAll("[data-repo]").forEach((a) => { a.href = Q.repo + a.dataset.repo; });
 
@@ -60,13 +90,14 @@
       page.classList.add("tab-in");
     }
     current = tab;
+    if (LAZY[tab]) need(tab);
     for (const t of tabs) $("#tab-" + t).hidden = t !== tab;
     const fixTabs = [...document.querySelectorAll(".mode.fix a[data-tab]")].map((a) => a.dataset.tab);
     const mode = fixTabs.includes(tab) ? "fix" : "learn";
     document.documentElement.dataset.mode = mode;
     document.querySelectorAll(".sw").forEach((a) => (a.classList.contains(mode) ? a.setAttribute("aria-current", "true") : a.removeAttribute("aria-current")));
     document.querySelectorAll(".subnav a").forEach((a) => (a.dataset.tab === tab ? a.setAttribute("aria-current", "page") : a.removeAttribute("aria-current")));
-    if (want === "play" && sub && window.AQPlayground) window.AQPlayground.load(sub);
+    if (want === "play" && sub) { if (window.AQPlayground) window.AQPlayground.load(sub); else need("play").then(() => { if (location.hash === "#play/" + sub) window.AQPlayground.load(sub); }); }
     if (want === "fix" && sub) { const i = Q.doctor.findIndex((d) => d.id === sub); if (i >= 0) renderDoctor(i, true); }
     return { want, sub };
   }
@@ -122,8 +153,8 @@
   }
 
   function heroStats() {
-    const quiz = Object.values(window.TRACK_QUIZ_BANK).flat().length;
-    const n = window.AQScenarios.SCENARIOS.length;
+    const quiz = window.TRACK_QUIZ_COUNT;
+    const n = SCENARIOS.length;
     $("#stats").replaceChildren(...[[n, "incidents to fix in the playground"], [Q.levels.length, "levels, basics to production"], [Q.doctor.length, "error messages explained"], [quiz, "quiz questions with reasons"]]
       .map(([v, l]) => h("div", null, h("b", null, String(v)), h("span", null, l))));
     $("#pg-count").textContent = `${n} real incidents, from a missing runs-on to OIDC trust policies. No install, no account.`;
@@ -143,7 +174,7 @@
         box.append(h("h3.stage-title", { id: "stage-" + stage.toLowerCase() }, stage), list);
       }
       const isDone = done.has(lv.id);
-      const scn = window.AQScenarios.SCENARIOS.filter((s) => s.level === lv.id);
+      const scn = SCENARIOS.filter((s) => s.level === lv.id);
       list.append(h("li.level" + (isDone ? ".done" : ""), { id: "lv-" + lv.id },
         h("input", { type: "checkbox", checked: isDone, "aria-label": `Mark level ${lv.id} complete`, onchange: (e) => {
           if (e.target.checked) done.add(lv.id); else done.delete(lv.id);
@@ -169,13 +200,14 @@
 
   // --- quiz ---------------------------------------------------------------------------
   const EXAM_SIZE = 20;
-  const questionsFor = (id) => (window.TRACK_QUIZ_BANK[id] || []).map((x) => ({ ...x, level: id }));
+  const questionsFor = (id) => ((window.TRACK_QUIZ_BANK || {})[id] || []).map((x) => ({ ...x, level: id }));
   function shuffle(list) {
     const a = [...list];
     for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; }
     return a;
   }
   function renderQuiz() {
+    if (!window.TRACK_QUIZ_BANK) { need("quiz").then(renderQuiz); return; }
     const mode = $("#quiz-level").value;
     const exam = mode === "exam";
     const items = exam ? shuffle(Q.levels.flatMap((l) => questionsFor(l.id))).slice(0, EXAM_SIZE) : questionsFor(mode);
@@ -269,6 +301,7 @@
   function explainText(text) {
     const err = $("#xray-error");
     if (!text.trim()) { err.textContent = "Paste a workflow first, or choose Load an example."; err.hidden = false; return; }
+    if (!window.AQXray) { need("xray").then(() => explainText(text)); return; }
     const res = window.AQXray.explain(text);
     if (res.error) { err.textContent = res.error; err.hidden = false; return; }
     err.hidden = true;
@@ -322,7 +355,7 @@
   function renderDoctor(index, quiet) {
     const d = Q.doctor[index];
     document.querySelectorAll("#doctor-list button").forEach((b) => b.setAttribute("aria-pressed", String(Number(b.dataset.index) === index)));
-    const titles = Object.fromEntries((window.AQPlayground ? window.AQPlayground.scenarios : []).map((x) => [x.id, x.title]));
+    const titles = scenarioTitles();
     const lv = Q.levels.find((l) => l.id === d.level);
     $("#doctor-out").replaceChildren(h("article.card.answer", { id: "fix-" + d.id },
       h("div.answer-head", null, h("h3", null, d.title), h("button.chip", { type: "button", onclick: (e) => copyLink("fix/" + d.id, e.currentTarget) }, "Copy link")),
@@ -360,12 +393,12 @@
     const out = $("#cheat-out");
     out.replaceChildren();
     if (!groups.size) { out.append(h("p.muted", null, "No match. Try cache, secret, matrix or concurrency.")); return; }
-    const titles = Object.fromEntries((window.AQPlayground ? window.AQPlayground.scenarios : []).map((x) => [x.id, x.title]));
+    const titles = scenarioTitles();
     for (const [group, rows] of groups) {
       out.append(h("h3.group", null, group), h("ul.cheats", null, rows.map(([cmd, what, where]) => h("li", null,
         h("div", null, cmd.includes("\n") ? h("pre.snippet", null, h("code", null, cmd)) : h("code", null, cmd), h("span.muted", null, what)),
         h("div.cheat-actions", null,
-          where ? h("button.copy", { type: "button", title: `Try it in the playground scenario "${titles[where] || where}"`, onclick: () => { location.hash = "path"; window.AQPlayground.prefill(cmd, where); } }, "Try")
+          where ? h("button.copy", { type: "button", title: `Try it in the playground scenario "${titles[where] || where}"`, onclick: () => { location.hash = "path"; withPg((p) => p.prefill(cmd, where)); } }, "Try")
             : h("a.copy.lab", { href: Q.repo + "#quick-start", title: "Needs a real repository: try it in your fork" }, "Lab"),
           copyButton(cmd))))));
     }
@@ -405,7 +438,7 @@
       { label: "How a run works", kind: "Section", run: () => go("arch") },
       ...Q.levels.map((lv) => ({ label: `Quiz: ${lv.id} · ${lv.topic}`, kind: "Quiz", run: () => go("quiz", () => { $("#quiz-level").value = lv.id; renderQuiz(); }) })),
       ...Q.doctor.map((d) => ({ label: `Troubleshoot: ${d.title}`, hint: d.error, kind: "Reference", run: () => go("fix/" + d.id) })),
-      ...(window.AQPlayground ? window.AQPlayground.scenarios : []).map((s) => ({ label: `Playground: ${s.title}`, hint: s.group, kind: "Practice", run: () => go("play/" + s.id) }))
+      ...SCENARIOS.map((s) => ({ label: `Playground: ${s.title}`, hint: s.group, kind: "Practice", run: () => go("play/" + s.id) }))
     ];
   }
   function renderPalette() {
@@ -417,7 +450,7 @@
     if (!pItems.length) pList.append(h("li.pal-empty", null, "Nothing matches. Try cache, OIDC or matrix."));
     pInput.setAttribute("aria-activedescendant", pItems.length ? "pal-" + pActive : "");
   }
-  function openPalette() { if (palette.open) return; pInput.value = ""; pActive = 0; renderPalette(); palette.showModal(); pInput.focus(); }
+  function openPalette() { if (palette.open) return; warm(); pInput.value = ""; pActive = 0; renderPalette(); palette.showModal(); pInput.focus(); }
   function choose(i) { const a = pItems[i]; if (!a) return; palette.close(); a.run(); }
   pInput.addEventListener("input", () => { pActive = 0; renderPalette(); });
   pInput.addEventListener("keydown", (e) => {
@@ -439,13 +472,16 @@
 
   // --- init -------------------------------------------------------------------------------
   $("#quiz-level").append(h("option", { value: "exam" }, `Exam: ${EXAM_SIZE} random questions from every level`));
-  for (const lv of Q.levels) $("#quiz-level").append(h("option", { value: lv.id }, `${lv.id} · ${lv.topic} (${questionsFor(lv.id).length} questions)`));
+  const quizLabel = (lv) => `${lv.id} · ${lv.topic} (${questionsFor(lv.id).length} questions)`;
+  for (const lv of Q.levels) $("#quiz-level").append(h("option", { value: lv.id }, quizLabel(lv)));
+  // The counts and questions arrive with the question bank.
+  ready.quiz = () => { for (const lv of Q.levels) $(`#quiz-level option[value="${lv.id}"]`).textContent = quizLabel(lv); renderQuiz(); };
   $("#quiz-level").value = "01";
   $("#quiz-level").addEventListener("change", renderQuiz);
   $("#quiz-again").addEventListener("click", renderQuiz);
   $("#xray-pick").append(h("button", { type: "button", role: "tab", "data-index": "-1", "aria-selected": "true", onclick: editXray }, "Paste your workflow"),
     ...Q.xrayFiles.map((f, i) => h("button", { type: "button", role: "tab", "data-index": String(i), "aria-selected": "false",
-      onclick: () => { selectXrayTab(i); showXray(window.AQXray.explain(f.text)); $("#xray-summary").prepend(f.path + " · "); } }, f.path.split("/").pop())));
+      onclick: function pick() { selectXrayTab(i); if (!window.AQXray) { need("xray").then(pick); return; } showXray(window.AQXray.explain(f.text)); $("#xray-summary").prepend(f.path + " · "); } }, f.path.split("/").pop())));
   $("#xray-go").addEventListener("click", () => explainText($("#xray-input").value));
   $("#xray-input").addEventListener("keydown", (e) => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) explainText($("#xray-input").value); });
   $("#xray-example").addEventListener("click", () => { $("#xray-input").value = Q.xrayExample; explainText(Q.xrayExample); });
@@ -459,13 +495,16 @@
   $("#door-q").addEventListener("keydown", (e) => { if (e.key === "Enter") doorGo(); });
   $("#cheat-q").addEventListener("input", renderCheats);
   $("#forget").addEventListener("click", forgetEverything);
-  signature();
   renderGuides();
-  renderQuiz();
+  renderCheats();
+  // The first screen in one pass, once engage.js has run too, then the heavy
+  // features in the background.
   window.addEventListener("DOMContentLoaded", () => {
+    signature();
     heroStats();
     renderPath();
-    renderCheats();
+    window.DQEngage.render();
     show();
+    (window.requestIdleCallback || ((fn) => setTimeout(fn, 200)))(() => warm());
   });
 })();
