@@ -75,7 +75,7 @@
     const rows = Math.max(...Object.values(L.at).map(([, r]) => r)) + 1;
     const [w, ht] = [L.cols * L.cell[0] + 16, rows * L.cell[1] + 64];
     const marker = (id) => s("marker", { id, viewBox: "0 0 8 8", refX: 7, refY: 4, markerWidth: 7, markerHeight: 7, orient: "auto-start-reverse" }, s("path", { d: "M0 0 8 4 0 8z" }));
-    svg = s("svg", { viewBox: `0 0 ${w} ${ht}`, class: "arch-svg", role: "group", "aria-label": "GitHub Actions architecture" }, s("defs", null, marker("arch-arrow"), marker("arch-arrow-on")));
+    svg = s("svg", { viewBox: `0 0 ${w} ${ht}`, class: "arch-svg", role: "group", "aria-label": "How a workflow run works" }, s("defs", null, marker("arch-arrow"), marker("arch-arrow-on")));
     for (const [label, r0, r1] of L.bands) {
       const y = r0 * L.cell[1] + 12 + (r0 >= L.bands[1][1] ? 24 : 0);
       svg.append(s("rect", { x: 4, y, width: w - 8, height: (r1 - r0 + 1) * L.cell[1] + 8, rx: 16, class: "arch-panel" }), s("text", { x: 18, y: y + 20, class: "arch-panel-label" }, label));
