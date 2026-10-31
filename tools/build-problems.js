@@ -15,7 +15,7 @@ function load() {
     delete require.cache[file];
     require(file);
   }
-  return { Q: window.QUEST, titles: Object.fromEntries(window.AQScenarios.SCENARIOS.map((s) => [s.id, s.title])) };
+  return { Q: window.TRACK, titles: Object.fromEntries(window.AQScenarios.SCENARIOS.map((s) => [s.id, s.title])) };
 }
 
 const esc = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
@@ -53,19 +53,19 @@ function build() {
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'none'; base-uri 'none'; form-action 'none'">
   <meta name="description" content="GitHub Actions errors and how to fix them: ${Q.doctor.length} error messages, each with the cause, how to confirm it, the fix and how to prevent it.">
-  <meta property="og:title" content="GitHub Actions errors and fixes · Actions Quest">
+  <meta property="og:title" content="GitHub Actions errors and fixes · DevOps Nimbus">
   <meta property="og:description" content="Every common GitHub Actions error message, with cause, confirmation, fix and prevention.">
   <meta property="og:type" content="article">
   <meta property="og:url" content="${Q.site}problems.html">
   <link rel="canonical" href="${Q.site}problems.html">
   <title>GitHub Actions errors and fixes</title>
   <link rel="stylesheet" href="style.css">
-  <link rel="icon" href="logo.svg" type="image/svg+xml">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
 </head>
 <body class="problems">
   <header class="top">
     <div class="wrap top-inner">
-      <a class="brand" href="index.html"><img src="logo.svg" alt="" width="22" height="22">Actions Quest</a>
+      <a class="brand" href="index.html"><img class="mark" src="nimbus.svg" alt="" width="37" height="22">DevOps Nimbus <span class="brand-track">GitHub Actions</span></a>
       <nav aria-label="Sections"><a href="index.html#doctor">Search errors</a><a href="index.html#playground">Playground</a></nav>
     </div>
   </header>

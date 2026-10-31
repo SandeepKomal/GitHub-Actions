@@ -387,11 +387,11 @@ scenario("secret-leak", [["      - name: Debug the token\n        run: echo \"$D
   [["| base64", "| base64 | base64"]]
 ]);
 assert.match(log(runOf("secret-leak", [["      - name: Debug the token\n        run: echo \"$DEPLOY_TOKEN\" | base64\n", "      - run: echo \"$DEPLOY_TOKEN\"\n"]])), /^\*\*\*$/m);
-const narrow = [['"StringEquals": {\n          "token.actions.githubusercontent.com:aud": "sts.amazonaws.com"\n        },\n        "StringLike": {\n          "token.actions.githubusercontent.com:sub": "repo:devquest/*"\n        }',
-  '"StringEquals": {\n          "token.actions.githubusercontent.com:aud": "sts.amazonaws.com",\n          "token.actions.githubusercontent.com:sub": "repo:devquest/shop:environment:production"\n        }', "aws/shop-deploy-trust.json"]];
+const narrow = [['"StringEquals": {\n          "token.actions.githubusercontent.com:aud": "sts.amazonaws.com"\n        },\n        "StringLike": {\n          "token.actions.githubusercontent.com:sub": "repo:nimbus/*"\n        }',
+  '"StringEquals": {\n          "token.actions.githubusercontent.com:aud": "sts.amazonaws.com",\n          "token.actions.githubusercontent.com:sub": "repo:nimbus/shop:environment:production"\n        }', "aws/shop-deploy-trust.json"]];
 scenario("oidc-trust", narrow, [
-  [["repo:devquest/*", "repo:devquest/shop:*", "aws/shop-deploy-trust.json"]],
-  [["repo:devquest/*", "repo:devquest/shop:ref:refs/heads/main", "aws/shop-deploy-trust.json"]],
+  [["repo:nimbus/*", "repo:nimbus/shop:*", "aws/shop-deploy-trust.json"]],
+  [["repo:nimbus/*", "repo:nimbus/shop:ref:refs/heads/main", "aws/shop-deploy-trust.json"]],
   [["\"Version\"", "\"Versio", "aws/shop-deploy-trust.json"]]
 ]);
 scenario("self-hosted", [["  test:\n    runs-on: [self-hosted, linux]\n", "  test:\n    runs-on: ubuntu-latest\n"]], [
@@ -447,7 +447,7 @@ assert.ok(solved("token-no-trigger", [
   ["  push:\n    tags: ['v*']\n", "  push:\n    tags: ['v*']\n  workflow_dispatch:\n", DEP]
 ]), "dispatching the deploy at the tag also works");
 assert.match(log(verify(S("token-no-trigger"), filesOf("token-no-trigger", [["          git push origin \"v1.4.${{ github.run_number }}\"\n", "          git push origin \"v1.4.${{ github.run_number }}\"\n          gh workflow run deploy.yml --ref v1\n        env:\n          GH_TOKEN: ${{ github.token }}\n", REL]])).run(0)),
-  /HTTP 403: Resource not accessible by integration \(https:\/\/api\.github\.com\/repos\/devquest\/shop\/actions\/workflows\/deploy\.yml\/dispatches\)/);
+  /HTTP 403: Resource not accessible by integration \(https:\/\/api\.github\.com\/repos\/nimbus\/shop\/actions\/workflows\/deploy\.yml\/dispatches\)/);
 assert.match(log(runOf("windows-shell")), /Remove-Item: A parameter cannot be found that matches parameter name 'rf'\./);
 assert.match(log(runOf("windows-shell")), /shell: C:\\Program Files\\PowerShell\\7\\pwsh\.EXE -command "\. '\{0\}'"/);
 scenario("windows-shell", [["      - name: Clean and build\n", "      - name: Clean and build\n        shell: bash\n"]], [
@@ -468,8 +468,8 @@ scenario("secret-output", [
   [['run: echo "image=${{ secrets.REGISTRY }}/shop', 'run: echo "image=$(echo ${{ secrets.REGISTRY }} | base64)/shop']]
 ]);
 assert.match(log(runOf("rate-limit")), /HTTP 403: API rate limit exceeded for installation ID 41806354\./);
-const paged = ["          for n in $(seq 1 1500); do\n            gh api \"repos/devquest/shop/pulls/$n\" --jq .title >> titles.txt\n          done\n",
-  "          gh api \"repos/devquest/shop/pulls?state=all&per_page=100\" --paginate --jq '.[].title' > titles.txt\n"];
+const paged = ["          for n in $(seq 1 1500); do\n            gh api \"repos/nimbus/shop/pulls/$n\" --jq .title >> titles.txt\n          done\n",
+  "          gh api \"repos/nimbus/shop/pulls?state=all&per_page=100\" --paginate --jq '.[].title' > titles.txt\n"];
 scenario("rate-limit", [paged], [
   [["--jq .title >> titles.txt\n", "--jq .title >> titles.txt\n            sleep 1\n"]],
   [["  pull-requests: read\n", "  pull-requests: write\n"]],

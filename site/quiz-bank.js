@@ -1,7 +1,7 @@
 // Quiz questions per level: q, options, answer (index), why. Plain data.
 "use strict";
 
-window.QUEST_QUIZ_BANK = {
+window.TRACK_QUIZ_BANK = {
   "01": [
     { q: "Where must a workflow file live for GitHub Actions to find it?", options: ["Anywhere, with a .yml extension", "In `.github/workflows/`", "In `.github/actions/`", "In the repository root as `actions.yml`"], answer: 1,
       why: "GitHub reads workflows only from `.github/workflows/` on the commit's branch. `.github/actions/` is a convention for local actions, not workflows." },

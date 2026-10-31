@@ -11,8 +11,8 @@ const root = path.resolve(__dirname, "..");
 const { build, OUT } = require(path.join(root, "tools/build-problems.js"));
 const problems = build(); // loads data.js and the simulator into a fresh window
 require(path.join(root, "site/quiz-bank.js"));
-const Q = window.QUEST;
-const bank = window.QUEST_QUIZ_BANK;
+const Q = window.TRACK;
+const bank = window.TRACK_QUIZ_BANK;
 const { SCENARIOS, gh, LAB, worldOf } = window.AQScenarios;
 const E = window.AQEngine;
 const { parse } = window.AQYaml;

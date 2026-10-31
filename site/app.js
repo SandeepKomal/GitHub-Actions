@@ -1,8 +1,8 @@
-// Actions Quest site. No dependencies, no network requests.
+// DevOps Nimbus GitHub Actions site. No dependencies, no network requests.
 "use strict";
 
 (function () {
-  const Q = window.QUEST;
+  const Q = window.TRACK;
   const $ = (sel) => document.querySelector(sel);
   const still = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
   const scrollToEl = (el) => el.scrollIntoView({ block: "start", behavior: still() ? "auto" : "smooth" });
@@ -118,7 +118,7 @@
   }
 
   function heroStats() {
-    const quiz = Object.values(window.QUEST_QUIZ_BANK).flat().length;
+    const quiz = Object.values(window.TRACK_QUIZ_BANK).flat().length;
     const n = window.AQScenarios.SCENARIOS.length;
     $("#stats").replaceChildren(...[[n, "incidents to fix in the playground"], [Q.levels.length, "levels, basics to production"], [Q.doctor.length, "error messages explained"], [quiz, "quiz questions with reasons"]]
       .map(([v, l]) => h("div", null, h("b", null, String(v)), h("span", null, l))));
@@ -140,10 +140,11 @@
       }
       const isDone = done.has(lv.id);
       const scn = window.AQScenarios.SCENARIOS.filter((s) => s.level === lv.id);
-      list.append(h("li.level" + (isDone ? ".done" : ""), null,
+      list.append(h("li.level" + (isDone ? ".done" : ""), { id: "lv-" + lv.id },
         h("input", { type: "checkbox", checked: isDone, "aria-label": `Mark level ${lv.id} complete`, onchange: (e) => {
           if (e.target.checked) done.add(lv.id); else done.delete(lv.id);
           store.set("done", [...done]);
+          if (e.target.checked) window.DQEngage.active();
           renderPath();
         } }),
         h("span.num", null, lv.id),
@@ -151,7 +152,7 @@
           h("summary", null, h("strong", null, lv.title), h("span.topic", null, lv.topic)),
           h("div.level-body", null,
             h("h4", null, "What you learn"), h("ul", null, lv.learn.map((t) => h("li", null, ...rich(t)))),
-            h("h4", null, "Lab, in your fork"), h("ol", null, lv.lab.map((t) => h("li", null, ...rich(t)))),
+            h("h4", null, "Lab, in your fork"), window.DQEngage.order(lv, h("ol", null, lv.lab.map((t) => h("li", null, ...rich(t))))),
             h("p.note", null, "Files: ", ...lv.files.flatMap((f, i) => [i ? ", " : "", h("a", { href: `${Q.repo}/blob/main/${f}` }, f)])),
             scn.length ? h("div.doctor-practise", null, h("span.muted.small", null, "Practise:"), scn.map((s) => h("a.chip", { href: "#play/" + s.id }, s.title))) : null)),
         h("span.actions", null, h("a.small", { href: "#quiz", onclick: () => { $("#quiz-level").value = lv.id; renderQuiz(); } }, lv.id in scores ? `Quiz ${scores[lv.id]}%` : "Quiz"))));
@@ -164,7 +165,7 @@
 
   // --- quiz ---------------------------------------------------------------------------
   const EXAM_SIZE = 20;
-  const questionsFor = (id) => (window.QUEST_QUIZ_BANK[id] || []).map((x) => ({ ...x, level: id }));
+  const questionsFor = (id) => (window.TRACK_QUIZ_BANK[id] || []).map((x) => ({ ...x, level: id }));
   function shuffle(list) {
     const a = [...list];
     for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; }
@@ -185,7 +186,7 @@
       fill.style.width = (answered / items.length * 100) + "%";
       if (answered === items.length) {
         const pct = Math.round(correct / items.length * 100);
-        if (!exam) { const all = store.get("quiz", {}); all[mode] = Math.max(all[mode] || 0, pct); store.set("quiz", all); renderPath(); }
+        if (!exam) { const all = store.get("quiz", {}); all[mode] = Math.max(all[mode] || 0, pct); store.set("quiz", all); window.DQEngage.active(); renderPath(); }
         score.append(h("p.result", null, h("strong", null, `${pct}%. `), pct === 100 ? "Perfect score." : pct >= 75 ? "Strong. Review the explanations you missed." : "Read the explanations, practise the level, and try again.",
           " ", h("button.linkish", { type: "button", onclick: renderQuiz }, exam ? "New exam" : "Try again")));
       }
@@ -456,7 +457,6 @@
   $("#forget").addEventListener("click", forgetEverything);
   signature();
   renderGuides();
-  renderPath();
   renderQuiz();
   window.addEventListener("DOMContentLoaded", () => {
     heroStats();
