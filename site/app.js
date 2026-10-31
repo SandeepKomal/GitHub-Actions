@@ -332,7 +332,7 @@
         h("h4", null, "Now learn it"),
         h("p", null, "Break this yourself in a safe playground and fix it. Doing it once is what makes you recognise it next time."),
         d.scenarios.length ? h("div.doctor-practise", null, h("span.muted.small", null, "Practise:"), d.scenarios.filter((id) => titles[id]).map((id) => h("a.chip", { href: "#play/" + id }, titles[id]))) : null,
-        lv ? h("p.note", null, "Then the level that teaches it: ", h("a", { href: "#path", onclick: () => setTimeout(() => scrollToEl($("#levels")), 0) }, `Level ${lv.id} · ${lv.title}`)) : null)));
+        lv ? h("p.note", null, "Then the level that teaches it: ", h("a", { href: "#path", onclick: (e) => { e.preventDefault(); go("path", () => scrollToEl($("#levels"))); } }, `Level ${lv.id} · ${lv.title}`)) : null)));
     if (!quiet || location.hash.startsWith("#fix/")) setTimeout(() => scrollToEl($("#doctor-out")), 0);
   }
 
